@@ -1,0 +1,8 @@
+node_modules/
+.cache/
+.env
+*.log
+frontend/node_modules/
+frontend/.cache/
+backend/node_modules/
+backend/.cache/
