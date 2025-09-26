@@ -1,0 +1,22 @@
+{
+  "projects": [
+    {
+      "name": "frontend",
+      "rootDirectory": "frontend",
+      "buildCommand": "npm run build",
+      "outputDirectory": "frontend/build",
+      "framework": "react"
+    },
+    {
+      "name": "backend",
+      "rootDirectory": "backend",
+      "buildCommand": "npm install",
+      "outputDirectory": "backend",
+      "framework": null,
+      "serverless": true,
+      "functions": {
+        "api/index.js": "backend/server.js"
+      }
+    }
+  ]
+}
