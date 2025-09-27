@@ -53,6 +53,7 @@ router.get('/', async (req, res) => {
 			topConductores
 		});
 	} catch (error) {
+		console.error('DASHBOARD_ERROR:', error);
 		return responseUtils.errorResponse(res, 'DASHBOARD_ERROR', error.message);
 	}
 });
