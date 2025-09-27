@@ -15,20 +15,33 @@ router.get('/', async (req, res) => {
 		// Tendencia de inspecciones por día (últimos 7 días)
 		const desde = new Date();
 		desde.setDate(desde.getDate() - 7);
-		const tendencia = await prisma.inspeccion.groupBy({
-			by: ['fecha'],
+		const inspecciones = await prisma.inspeccion.findMany({
 			where: { fecha: { gte: desde } },
-			_count: { id: true }
+			select: { fecha: true }
 		});
+		// Agrupar por día (YYYY-MM-DD)
+		const tendenciaMap = {};
+		inspecciones.forEach(i => {
+			const dia = i.fecha.toISOString().slice(0, 10);
+			tendenciaMap[dia] = (tendenciaMap[dia] || 0) + 1;
+		});
+		const tendencia = Object.keys(tendenciaMap).sort().map(fecha => ({ fecha, count: tendenciaMap[fecha] }));
 
 		// Conductores con más alertas
-		const topConductores = await prisma.inspeccion.groupBy({
-			by: ['conductor_nombre'],
+		const alertas = await prisma.inspeccion.findMany({
 			where: { tiene_alertas_criticas: true },
-			_count: { id: true },
-			orderBy: { _count: { id: 'desc' } },
-			take: 5
+			select: { conductor_nombre: true }
 		});
+		const conductorMap = {};
+		alertas.forEach(a => {
+			if (a.conductor_nombre) {
+				conductorMap[a.conductor_nombre] = (conductorMap[a.conductor_nombre] || 0) + 1;
+			}
+		});
+		const topConductores = Object.entries(conductorMap)
+			.map(([conductor_nombre, count]) => ({ conductor_nombre, _count: { id: count } }))
+			.sort((a, b) => b._count.id - a._count.id)
+			.slice(0, 5);
 
 		return responseUtils.successResponse(res, {
 			totalInspecciones,
