@@ -1,9 +1,9 @@
-app = "monolitico"
-# fly.toml app configuration file generated for monolitico on 2025-09-27T16:22:34Z
+# fly.toml app configuration file generated for monolitico-cold-dew-3627 on 2025-09-29T07:21:20Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
+app = 'monolitico-cold-dew-3627'
 primary_region = 'iad'
 
 [build]
