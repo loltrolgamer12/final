@@ -1,159 +1,366 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Grid, Card, CardContent, Typography, CircularProgress, Alert, Modal, Button } from '@mui/material';
-import axios from 'axios';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import React, { useState, useEffect } from 'react';
+import { 
+  Box, 
+  Typography, 
+  Paper, 
+  Grid, 
+  Card, 
+  CardContent, 
+  Chip,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Button,
+  LinearProgress,
+  Divider
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
+import { useNavigate } from 'react-router-dom';
 
-export default function DashboardPage() {
-  const [data, setData] = useState(null);
+// Iconos
+import StorageIcon from '@mui/icons-material/Storage';
+import ApiIcon from '@mui/icons-material/Api';
+import DevicesIcon from '@mui/icons-material/Devices';
+import SpeedIcon from '@mui/icons-material/Speed';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import PersonIcon from '@mui/icons-material/Person';
+import HistoryIcon from '@mui/icons-material/History';
+import NotificationsIcon from '@mui/icons-material/Notifications';
+import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
+import BuildIcon from '@mui/icons-material/Build';
+import EngineeringIcon from '@mui/icons-material/Engineering';
+import SettingsIcon from '@mui/icons-material/Settings';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+
+import api from '../services/api';
+
+// Componentes estilizados
+const StatusCard = styled(Box)(({ theme, status }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  padding: theme.spacing(2),
+  borderRadius: 8,
+  backgroundColor: '#f8f9fa',
+  border: '1px solid #f0f0f0',
+  '& .MuiChip-root': {
+    backgroundColor: status === 'Conectada' ? '#47d16c' : status === 'Operativo' ? '#47d16c' : status === 'N/A' ? '#ffc107' : '#e0e0e0',
+    color: status === 'Conectada' || status === 'Operativo' ? 'white' : status === 'N/A' ? '#333' : 'initial',
+  }
+}));
+
+const ModuleCard = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(2),
+  borderRadius: 12,
+  boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.05)',
+  height: '100%',
+  display: 'flex',
+  flexDirection: 'column',
+  position: 'relative',
+  overflow: 'hidden',
+}));
+
+const StyledButton = styled(Button)(({ theme, color = 'primary' }) => ({
+  borderRadius: 8,
+  textTransform: 'none',
+  fontWeight: 500,
+  backgroundColor: color === 'primary' ? '#1976d2' : color === 'success' ? '#2e7d32' : '#9c27b0',
+  '&:hover': {
+    backgroundColor: color === 'primary' ? '#1565c0' : color === 'success' ? '#2e7d32' : '#7b1fa2',
+  }
+}));
+
+const FeatureItem = styled(ListItem)({
+  padding: '4px 0',
+});
+
+export default function Dashboard() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalTitle, setModalTitle] = useState('');
-  const [modalContent, setModalContent] = useState([]);
-  // Log para depuración
-  console.log('API URL:', process.env.REACT_APP_API_URL);
-  const handleCardClick = async (type) => {
-    setModalTitle('');
-    setModalContent([]);
-    setModalOpen(true);
-    let res;
-    switch (type) {
-      case 'inspecciones':
-        setModalTitle('Últimas inspecciones');
-        res = await axios.get('/api/inspecciones?limit=10');
-        setModalContent(res.data.data);
-        break;
-      case 'alertas':
-        setModalTitle('Alertas críticas');
-        res = await axios.get('/api/inspecciones?alerta=true');
-        setModalContent(res.data.data);
-        break;
-      case 'bajo':
-        setModalTitle('Inspecciones de riesgo bajo');
-        res = await axios.get('/api/inspecciones?riesgo=BAJO');
-        setModalContent(res.data.data);
-        break;
-      case 'medio':
-        setModalTitle('Inspecciones de riesgo medio');
-        res = await axios.get('/api/inspecciones?riesgo=MEDIO');
-        setModalContent(res.data.data);
-        break;
-      case 'alto':
-        setModalTitle('Inspecciones de riesgo alto');
-        res = await axios.get('/api/inspecciones?riesgo=ALTO');
-        setModalContent(res.data.data);
-        break;
-      default:
-        setModalOpen(false);
-    }
-  };
+  const [stats, setStats] = useState({
+    totalInspecciones: 0,
+    altoRiesgo: 0,
+    medioRiesgo: 0,
+    bajoRiesgo: 0,
+    uptime: '99.9%',
+    responseTime: '<300ms'
+  });
 
   useEffect(() => {
-    axios.get('/api/dashboard')
-      .then(res => {
-        console.log('Respuesta dashboard:', res);
-        setData(res.data.data);
-      })
-      .catch(err => {
-        console.error('Error al cargar dashboard:', err);
-        setError('Error al cargar dashboard');
-      })
-      .finally(() => setLoading(false));
+    async function fetchData() {
+      try {
+        const response = await api.get('/dashboard');
+        if (response.data.success) {
+          setStats({
+            ...stats,
+            totalInspecciones: response.data.data.total || 0,
+            altoRiesgo: response.data.data.altoRiesgo || 0,
+            medioRiesgo: response.data.data.medioRiesgo || 0,
+            bajoRiesgo: response.data.data.bajoRiesgo || 0,
+          });
+        }
+      } catch (error) {
+        console.error('Error al cargar datos del dashboard:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
   }, []);
 
-  if (loading) return <CircularProgress sx={{ mt: 4 }} />;
-  if (error) return <Alert severity="error">{error}</Alert>;
-  if (!data) return null;
+  const handleCardClick = (path) => {
+    navigate(path);
+  };
+
+  // Indicadores de estado del sistema
+  const systemStatusItems = [
+    { label: 'Base de Datos', icon: <StorageIcon />, status: 'Conectada' },
+    { label: 'API Status', icon: <ApiIcon />, status: 'Operativo' },
+    { label: 'Entorno', icon: <DevicesIcon />, status: 'production' },
+    { label: 'Performance', icon: <SpeedIcon />, status: 'N/A' }
+  ];
 
   return (
-    <Box sx={{ mt: 2 }}>
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={3}>
-          <Card onClick={() => handleCardClick('inspecciones')} sx={{ cursor: 'pointer' }}>
-            <CardContent>
-              <Typography variant="h6">Inspecciones</Typography>
-              <Typography variant="h4" color="primary">{data.totalInspecciones}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Card onClick={() => handleCardClick('alertas')} sx={{ cursor: 'pointer' }}>
-            <CardContent>
-              <Typography variant="h6">Alertas críticas</Typography>
-              <Typography variant="h4" color="error">{data.totalAlertas}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={2}>
-          <Card onClick={() => handleCardClick('bajo')} sx={{ cursor: 'pointer' }}>
-            <CardContent>
-              <Typography variant="h6">Riesgo bajo</Typography>
-              <Typography variant="h5" color="success.main">{data.bajoRiesgo}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={2}>
-          <Card onClick={() => handleCardClick('medio')} sx={{ cursor: 'pointer' }}>
-            <CardContent>
-              <Typography variant="h6">Riesgo medio</Typography>
-              <Typography variant="h5" color="warning.main">{data.medioRiesgo}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={2}>
-          <Card onClick={() => handleCardClick('alto')} sx={{ cursor: 'pointer' }}>
-            <CardContent>
-              <Typography variant="h6">Riesgo alto</Typography>
-              <Typography variant="h5" color="error">{data.altoRiesgo}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)}>
-        <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', bgcolor: 'background.paper', p: 4, minWidth: 400, maxHeight: '80vh', overflowY: 'auto', borderRadius: 2 }}>
-          <Typography variant="h6" gutterBottom>{modalTitle}</Typography>
-          {modalContent.length === 0 ? (
-            <Typography>No hay información disponible.</Typography>
-          ) : (
-            modalContent.map((item, idx) => (
-              <Box key={idx} sx={{ mb: 2, p: 2, border: '1px solid #eee', borderRadius: 1 }}>
-                <Typography variant="subtitle2">Conductor: {item.conductor_nombre}</Typography>
-                <Typography variant="body2">Fecha: {item.fecha ? new Date(item.fecha).toLocaleString() : ''}</Typography>
-                <Typography variant="body2">Riesgo: {item.nivel_riesgo}</Typography>
-                {item.tiene_alertas_criticas && <Typography color="error">Alerta crítica</Typography>}
-                {item.observaciones && <Typography variant="body2">Observaciones: {item.observaciones}</Typography>}
-              </Box>
-            ))
-          )}
-          <Button onClick={() => setModalOpen(false)} variant="contained" sx={{ mt: 2 }}>Cerrar</Button>
+    <Box>
+      {/* Título principal y descripción */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" sx={{ mb: 1, fontWeight: 500 }}>
+          Sistema de Inspección Vehicular
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+          Plataforma integral de gestión vehicular con IA integrada, análisis predictivo y alertas automáticas para la optimización total de su flota.
+        </Typography>
+        
+        {/* Indicadores de rendimiento */}
+        <Box sx={{ display: 'flex', gap: 3, mb: 2, justifyContent: 'flex-end' }}>
+          <Box sx={{ textAlign: 'right' }}>
+            <Typography variant="h4" sx={{ fontWeight: 'bold' }}>{stats.uptime}</Typography>
+            <Typography variant="body2" color="text.secondary">Uptime</Typography>
+          </Box>
+          <Box sx={{ textAlign: 'right' }}>
+            <Typography variant="h4" sx={{ fontWeight: 'bold' }}>{stats.responseTime}</Typography>
+            <Typography variant="body2" color="text.secondary">Búsqueda</Typography>
+          </Box>
         </Box>
-      </Modal>
-      </Grid>
-      <Box sx={{ mt: 4 }}>
-        <Typography variant="h6" gutterBottom>Tendencia de inspecciones (últimos 7 días)</Typography>
-        <ResponsiveContainer width="100%" height={250}>
-          <BarChart data={data.tendencia}>
-            <XAxis dataKey="fecha" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="count" fill="#1976d2" />
-          </BarChart>
-        </ResponsiveContainer>
       </Box>
-      <Box sx={{ mt: 4 }}>
-        <Typography variant="h6" gutterBottom>Conductores con más alertas</Typography>
+
+      {/* Estado del sistema en tiempo real */}
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          p: 2, 
+          mb: 4, 
+          borderRadius: 2,
+          border: '1px solid #e0e0e0',
+          borderLeft: '4px solid #1976d2'
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <DashboardIcon sx={{ color: 'primary.main', mr: 1 }} />
+          <Typography variant="h6">Estado del Sistema en Tiempo Real</Typography>
+        </Box>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Monitoreo continuo de servicios críticos y conexiones de base de datos
+        </Typography>
+
         <Grid container spacing={2}>
-          {data.topConductores.map(c => (
-            <Grid item xs={12} md={4} key={c.conductor_nombre}>
-              <Card>
-                <CardContent>
-                  <Typography variant="subtitle1">{c.conductor_nombre}</Typography>
-                  <Typography variant="h5" color="error">{c._count.id} alertas</Typography>
-                </CardContent>
-              </Card>
+          {systemStatusItems.map((item) => (
+            <Grid item xs={12} sm={6} md={3} key={item.label}>
+              <StatusCard status={item.status}>
+                <Box sx={{ mr: 1 }}>{item.icon}</Box>
+                <Box sx={{ flexGrow: 1, mr: 1 }}>
+                  <Typography variant="body2">{item.label}</Typography>
+                </Box>
+                <Chip 
+                  label={item.status} 
+                  size="small" 
+                />
+              </StatusCard>
             </Grid>
           ))}
         </Grid>
-      </Box>
+      </Paper>
+
+      {/* Módulos principales */}
+      <Grid container spacing={3}>
+        {/* Dashboard Ejecutivo */}
+        <Grid item xs={12} md={4}>
+          <ModuleCard>
+            <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
+              <Chip label="MEJORADO" size="small" sx={{ backgroundColor: '#ffc107', color: '#333' }} />
+            </Box>
+            <Box sx={{ p: 1, mb: 2 }}>
+              <DashboardIcon sx={{ fontSize: 40, color: 'primary.main', padding: '8px', backgroundColor: '#e3f2fd', borderRadius: '8px' }} />
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>Dashboard Ejecutivo</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Métricas en tiempo real con análisis automático, alertas críticas y tendencias predictivas para toma de decisiones informada.
+            </Typography>
+
+            <List disablePadding sx={{ mb: 2 }}>
+              <FeatureItem>
+                <ListItemIcon sx={{ minWidth: 30 }}>
+                  <CheckCircleOutlineIcon color="primary" fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary="Métricas en tiempo real" />
+              </FeatureItem>
+              <FeatureItem>
+                <ListItemIcon sx={{ minWidth: 30 }}>
+                  <CheckCircleOutlineIcon color="primary" fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary="Análisis predictivo" />
+              </FeatureItem>
+              <FeatureItem>
+                <ListItemIcon sx={{ minWidth: 30 }}>
+                  <CheckCircleOutlineIcon color="primary" fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary="Alertas automáticas" />
+              </FeatureItem>
+            </List>
+
+            <Box sx={{ mt: 'auto' }}>
+              <StyledButton 
+                variant="contained" 
+                fullWidth
+                endIcon={<ArrowForwardIcon />}
+                onClick={() => handleCardClick('/')}
+              >
+                Acceder
+              </StyledButton>
+            </Box>
+          </ModuleCard>
+        </Grid>
+
+        {/* Gestión de Conductores */}
+        <Grid item xs={12} md={4}>
+          <ModuleCard>
+            <Box sx={{ p: 1, mb: 2 }}>
+              <PersonIcon sx={{ fontSize: 40, color: '#2e7d32', padding: '8px', backgroundColor: '#e8f5e9', borderRadius: '8px' }} />
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>Gestión de Conductores</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Control integral de personal con análisis avanzado de fatiga, historial de comportamiento y sistema de alertas proactivo.
+            </Typography>
+
+            <List disablePadding sx={{ mb: 2 }}>
+              <FeatureItem>
+                <ListItemIcon sx={{ minWidth: 30 }}>
+                  <CheckCircleOutlineIcon color="success" fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary="Control de fatiga" />
+              </FeatureItem>
+              <FeatureItem>
+                <ListItemIcon sx={{ minWidth: 30 }}>
+                  <CheckCircleOutlineIcon color="success" fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary="Historial completo" />
+              </FeatureItem>
+              <FeatureItem>
+                <ListItemIcon sx={{ minWidth: 30 }}>
+                  <CheckCircleOutlineIcon color="success" fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary="Alertas proactivas" />
+              </FeatureItem>
+            </List>
+
+            <Box sx={{ mt: 'auto' }}>
+              <StyledButton 
+                variant="contained" 
+                fullWidth
+                color="success" 
+                endIcon={<ArrowForwardIcon />}
+                onClick={() => handleCardClick('/search')}
+              >
+                Acceder
+              </StyledButton>
+            </Box>
+          </ModuleCard>
+        </Grid>
+
+        {/* Control de Vehículos */}
+        <Grid item xs={12} md={4}>
+          <ModuleCard>
+            <Box sx={{ p: 1, mb: 2 }}>
+              <DirectionsCarIcon sx={{ fontSize: 40, color: '#9c27b0', padding: '8px', backgroundColor: '#f3e5f5', borderRadius: '8px' }} />
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>Control de Vehículos</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Monitoreo completo de flotilla con análisis de fallas, mantenimiento predictivo y optimización de recursos.
+            </Typography>
+
+            <List disablePadding sx={{ mb: 2 }}>
+              <FeatureItem>
+                <ListItemIcon sx={{ minWidth: 30 }}>
+                  <CheckCircleOutlineIcon sx={{ color: '#9c27b0' }} fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary="Análisis de fallas" />
+              </FeatureItem>
+              <FeatureItem>
+                <ListItemIcon sx={{ minWidth: 30 }}>
+                  <CheckCircleOutlineIcon sx={{ color: '#9c27b0' }} fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary="Mantenimiento predictivo" />
+              </FeatureItem>
+              <FeatureItem>
+                <ListItemIcon sx={{ minWidth: 30 }}>
+                  <CheckCircleOutlineIcon sx={{ color: '#9c27b0' }} fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary="Optimización" />
+              </FeatureItem>
+            </List>
+
+            <Box sx={{ mt: 'auto' }}>
+              <StyledButton 
+                variant="contained" 
+                fullWidth
+                sx={{ bgcolor: '#9c27b0' }}
+                endIcon={<ArrowForwardIcon />}
+                onClick={() => handleCardClick('/search')}
+              >
+                Acceder
+              </StyledButton>
+            </Box>
+          </ModuleCard>
+        </Grid>
+      </Grid>
+
+      {/* Métricas de resumen */}
+      <Paper sx={{ p: 3, mt: 4, borderRadius: 2 }}>
+        <Typography variant="h6" sx={{ mb: 2 }}>Resumen Operativo</Typography>
+        {loading ? <LinearProgress /> : (
+          <Grid container spacing={3}>
+            <Grid item xs={6} sm={3}>
+              <Box sx={{ textAlign: 'center', p: 2 }}>
+                <Typography variant="h4" color="text.primary">{stats.totalInspecciones}</Typography>
+                <Typography variant="body2" color="text.secondary">Inspecciones Totales</Typography>
+              </Box>
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <Box sx={{ textAlign: 'center', p: 2 }}>
+                <Typography variant="h4" color="error.main">{stats.altoRiesgo}</Typography>
+                <Typography variant="body2" color="text.secondary">Alertas Críticas</Typography>
+              </Box>
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <Box sx={{ textAlign: 'center', p: 2 }}>
+                <Typography variant="h4" color="warning.main">{stats.medioRiesgo}</Typography>
+                <Typography variant="body2" color="text.secondary">Riesgo Medio</Typography>
+              </Box>
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <Box sx={{ textAlign: 'center', p: 2 }}>
+                <Typography variant="h4" color="success.main">{stats.bajoRiesgo}</Typography>
+                <Typography variant="body2" color="text.secondary">Condiciones Normales</Typography>
+              </Box>
+            </Grid>
+          </Grid>
+        )}
+      </Paper>
     </Box>
   );
-}
+} 

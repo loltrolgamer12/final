@@ -24,7 +24,13 @@ router.get('/', async (req, res) => {
 			mensaje: a.observaciones || 'Sin observaciones',
 			conductor: a.conductor_nombre,
 			placa: a.placa_vehiculo,
-			fecha: a.fecha
+			fecha: a.fecha,
+			motivos: {
+				consumo_medicamentos: a.consumo_medicamentos,
+				horas_sueno_suficientes: a.horas_sueno_suficientes,
+				libre_sintomas_fatiga: a.libre_sintomas_fatiga,
+				condiciones_aptas: a.condiciones_aptas
+			}
 		}));
 		return responseUtils.successResponse(res, alertas);
 	} catch (error) {

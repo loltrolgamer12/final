@@ -14,40 +14,52 @@ module.exports = {
       const duplicates = [];
       const errors = [];
 
-      // Validar y detectar duplicados
+      // Validar y detectar duplicados (optimizado en bloque)
       for (const record of mappedRecords) {
         const validation = validationService.validateRecord(record);
         if (!validation.isValid) {
-            // Log detallado de errores de validación
-            console.log('Registro rechazado:', JSON.stringify(record));
-            console.log('Motivos de rechazo:', validation.errors);
           errors.push({ record, errors: validation.errors });
           continue;
         }
-        // Duplicado: placa + fecha + conductor
-        const exists = await prisma.inspeccion.findFirst({
-          where: {
-            placa_vehiculo: record.placa_vehiculo,
-            fecha: new Date(record.fecha),
-            conductor_nombre: record.conductor_nombre
-          }
-        });
-        if (exists) {
-          duplicates.push({ ...record, duplicate_id: exists.id });
-        } else {
-          validRecords.push(record);
-        }
+        validRecords.push(record);
       }
 
-      // Procesar por lotes e insertar en BD
-      const batchSize = options.batchSize || 500;
+      // Buscar duplicados en bloque
+      if (validRecords.length > 0) {
+        const orConditions = validRecords.map(r => ({
+          placa_vehiculo: r.placa_vehiculo,
+          fecha: new Date(r.fecha),
+          conductor_nombre: r.conductor_nombre
+        }));
+        // Prisma limita el tamaño de OR, así que dividir en lotes de 500
+        const chunkSize = 500;
+        let foundDuplicates = [];
+        for (let i = 0; i < orConditions.length; i += chunkSize) {
+          const chunk = orConditions.slice(i, i + chunkSize);
+          const chunkDuplicates = await prisma.inspeccion.findMany({ where: { OR: chunk }, select: { id: true, placa_vehiculo: true, fecha: true, conductor_nombre: true } });
+          foundDuplicates = foundDuplicates.concat(chunkDuplicates);
+        }
+        // Filtrar los duplicados
+        const isDuplicate = (rec) => foundDuplicates.some(d => d.placa_vehiculo === rec.placa_vehiculo && new Date(d.fecha).toISOString() === new Date(rec.fecha).toISOString() && d.conductor_nombre === rec.conductor_nombre);
+        const newValidRecords = [];
+        for (const rec of validRecords) {
+          if (isDuplicate(rec)) {
+            duplicates.push(rec);
+          } else {
+            newValidRecords.push(rec);
+          }
+        }
+        validRecords.length = 0;
+        validRecords.push(...newValidRecords);
+      }
+
+      // Procesar por lotes e insertar en BD (batchSize reducido a 100)
+      const batchSize = options.batchSize || 100;
       const batches = this.splitIntoBatches(validRecords, batchSize);
       let insertados = 0;
       for (const batch of batches) {
         try {
-          console.log('Intentando insertar batch:', JSON.stringify(batch));
           const result = await prisma.inspeccion.createMany({ data: batch });
-          console.log('Resultado inserción:', result);
           insertados += batch.length;
         } catch (error) {
           console.error('Error al insertar batch:', error);

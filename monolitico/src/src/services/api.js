@@ -1,8 +1,9 @@
 import axios from 'axios';
 
-console.log('Conectando con backend en:', process.env.REACT_APP_API_URL + '/api');
+console.log('Conectando con backend en: /api');
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL + '/api',
+  baseURL: '/api',
+  timeout: 10 * 60 * 1000 // 10 minutos
 });
 
 export default api;

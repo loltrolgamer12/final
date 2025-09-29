@@ -1,7 +1,109 @@
+
 const express = require('express');
 const router = express.Router();
 const prisma = require('../config/database');
 const responseUtils = require('../utils/responseUtils');
+
+// Dashboard ejecutivo de conductores
+router.get('/conductores', async (req, res) => {
+	try {
+		   // Agrupar inspecciones por conductor
+		   const conductores = await prisma.inspeccion.groupBy({
+			   by: ['conductor_nombre', 'placa_vehiculo'],
+			   _count: { id: true },
+			   _max: { nivel_riesgo: true, fecha: true },
+		   });
+
+		   // Obtener motivo de fatiga de la última inspección si aplica
+		   const data = await Promise.all(conductores.map(async c => {
+			   let motivoFatiga = '';
+			   if (c._max.nivel_riesgo === 'ALTO') {
+				   // Buscar la última inspección de ese conductor y placa
+				   const ultima = await prisma.inspeccion.findFirst({
+					   where: {
+						   conductor_nombre: c.conductor_nombre,
+						   placa_vehiculo: c.placa_vehiculo,
+						   nivel_riesgo: 'ALTO',
+						   fecha: c._max.fecha
+					   },
+					   orderBy: { fecha: 'desc' }
+				   });
+				   if (ultima) {
+					   let motivos = [];
+					   if (ultima.consumo_medicamentos) motivos.push('Consumo de medicamentos');
+					   if (ultima.horas_sueno_suficientes === false) motivos.push('Falta de sueño');
+					   if (ultima.libre_sintomas_fatiga === false) motivos.push('Síntomas de fatiga');
+					   if (ultima.condiciones_aptas === false) motivos.push('No apto para conducir');
+					   if (ultima.puntaje_fatiga < 2) motivos.push('Puntaje de fatiga bajo');
+					   if (motivos.length === 0) motivos.push('Riesgo alto detectado');
+					   motivoFatiga = motivos.join(', ');
+				   }
+			   }
+			   return {
+				   nombre: c.conductor_nombre,
+				   placa: c.placa_vehiculo,
+				   alertas: c._count.id,
+				   fatiga: c._max.nivel_riesgo === 'ALTO',
+				   cumplimiento: c._max.nivel_riesgo !== 'ALTO',
+				   motivoFatiga
+			   };
+		   }));
+		   return responseUtils.successResponse(res, data);
+	} catch (error) {
+		return responseUtils.errorResponse(res, 'CONDUCTORES_DASHBOARD_ERROR', error.message);
+	}
+});
+
+// Dashboard ejecutivo de vehículos
+router.get('/vehiculos', async (req, res) => {
+	try {
+		   // Agrupar inspecciones por vehículo
+		   const vehiculos = await prisma.inspeccion.groupBy({
+			   by: ['placa_vehiculo', 'conductor_nombre'],
+			   _count: { id: true },
+			   _max: { nivel_riesgo: true, fecha: true },
+		   });
+		   // Mapear a formato frontend con motivoCritico
+		   const componentesCriticos = [
+			   'frenos', 'frenos_emergencia', 'cinturones', 'vidrio_frontal', 'espejos', 'direccionales', 'limpiaparabrisas', 'altas_bajas'
+		   ];
+		   const data = await Promise.all(vehiculos.map(async v => {
+			   let motivoCritico = '';
+			   if (v._max.nivel_riesgo === 'ALTO') {
+				   // Buscar la última inspección crítica de ese vehículo
+				   const ultima = await prisma.inspeccion.findFirst({
+					   where: {
+						   placa_vehiculo: v.placa_vehiculo,
+						   conductor_nombre: v.conductor_nombre,
+						   nivel_riesgo: 'ALTO',
+						   fecha: v._max.fecha
+					   },
+					   orderBy: { fecha: 'desc' }
+				   });
+				   if (ultima) {
+					   let componentesMal = componentesCriticos.filter(c => ultima[c] === false);
+					   let motivos = [];
+					   if (componentesMal.length) motivos.push('Componentes: ' + componentesMal.join(', '));
+					   if (ultima.observaciones) motivos.push('Observaciones: ' + ultima.observaciones);
+					   if (motivos.length === 0) motivos.push('Riesgo alto detectado');
+					   motivoCritico = motivos.join('; ');
+				   }
+			   }
+			   return {
+				   placa: v.placa_vehiculo,
+				   conductor: v.conductor_nombre,
+				   alertas: v._count.id,
+				   critico: v._max.nivel_riesgo === 'ALTO',
+				   cumplimiento: v._max.nivel_riesgo !== 'ALTO',
+				   motivoCritico
+			   };
+		   }));
+		   return responseUtils.successResponse(res, data);
+	} catch (error) {
+		return responseUtils.errorResponse(res, 'VEHICULOS_DASHBOARD_ERROR', error.message);
+	}
+});
+// (eliminado duplicado)
 
 // Dashboard KPIs y tendencias
 router.get('/', async (req, res) => {

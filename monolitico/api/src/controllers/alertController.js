@@ -30,12 +30,21 @@ module.exports = {
         take: 20
       });
       fatiga.forEach(i => {
+        // Motivo detallado de fatiga
+        let motivos = [];
+        if (i.consumo_medicamentos) motivos.push('Consumo de medicamentos');
+        if (i.horas_sueno_suficientes === false) motivos.push('Falta de sueño');
+        if (i.libre_sintomas_fatiga === false) motivos.push('Síntomas de fatiga');
+        if (i.condiciones_aptas === false) motivos.push('No apto para conducir');
+        if (i.puntaje_fatiga < 2) motivos.push('Puntaje de fatiga bajo');
+        if (i.nivel_riesgo === 'ALTO' && motivos.length === 0) motivos.push('Riesgo alto detectado');
         alertas.push({
           tipo: 'FATIGA',
           conductor: i.conductor_nombre,
           placa: i.placa_vehiculo,
           fecha: i.fecha,
-          mensaje: `Riesgo de fatiga detectado para ${i.conductor_nombre} (${i.placa_vehiculo}) el ${i.fecha}`
+          motivo: motivos.join(', '),
+          mensaje: `Riesgo de fatiga para ${i.conductor_nombre} (${i.placa_vehiculo})${motivos.length ? ': ' + motivos.join(', ') : ''} el ${new Date(i.fecha).toLocaleDateString()}`
         });
       });
 
@@ -53,11 +62,16 @@ module.exports = {
       });
       vehiculos.forEach(i => {
         if (esComponenteCritico(i)) {
+          // Buscar qué componente(s) fallaron
+          let componentesMal = componentesCriticos.filter(c => i[c] === false);
+          let motivo = componentesMal.length ? `Componentes: ${componentesMal.join(', ')}` : '';
+          if (i.observaciones) motivo += (motivo ? '; ' : '') + `Observaciones: ${i.observaciones}`;
           alertas.push({
             tipo: 'VEHICULO_CRITICO',
             placa: i.placa_vehiculo,
             fecha: i.fecha,
-            mensaje: `Componente crítico en mal estado en vehículo ${i.placa_vehiculo} el ${i.fecha}`
+            motivo,
+            mensaje: `Advertencia en vehículo ${i.placa_vehiculo}${motivo ? ': ' + motivo : ''} el ${new Date(i.fecha).toLocaleDateString()}`
           });
         }
       });
