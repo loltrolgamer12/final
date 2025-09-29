@@ -3,6 +3,6 @@ const prisma = require('./src/config/database');
 
 const PORT = process.env.PORT || 4000;
 
-app.listen(PORT, () => {
-  console.log(`Servidor HQ-FO-40 escuchando en puerto ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Servidor HQ-FO-40 escuchando en puerto ${PORT} (0.0.0.0)`);
 });
