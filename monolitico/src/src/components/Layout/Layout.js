@@ -86,13 +86,11 @@ const VersionChip = styled(Chip)(({ theme }) => ({
   }
 }));
 
-// Opciones del menú
+// Opciones del menú (solo relevantes)
 const menuItems = [
-  { text: 'Inicio', icon: <HomeIcon />, path: '/' },
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
   { text: 'Conductores', icon: <PersonIcon />, path: '/conductores' },
   { text: 'Vehículos', icon: <DirectionsCarIcon />, path: '/vehiculos' },
-  { text: 'Control de Fatiga', icon: <WarningIcon />, path: '/alerts' },
   { text: 'Carga Excel', icon: <FileUploadIcon />, path: '/upload' },
   { text: 'Reportes', icon: <AssessmentIcon />, path: '/reportes' },
   { text: 'Búsqueda', icon: <SearchIcon />, path: '/search' },

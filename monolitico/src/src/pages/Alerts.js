@@ -115,86 +115,29 @@ export default function AlertsPage() {
   };
   
   // Separar alertas por tipo
-  const alertasFatiga = Array.isArray(alertas) ? alertas.filter(a => a.tipo === 'FATIGA') : [];
   const alertasVehiculo = Array.isArray(alertas) ? alertas.filter(a => a.tipo === 'VEHICULO_CRITICO') : [];
   const alertasCumplimiento = Array.isArray(alertas) ? alertas.filter(a => a.tipo === 'SIN_TIPO') : [];
   
   // Contenido según pestaña seleccionada
   const alertContent = () => {
-    if (tabValue === 0) { // Todas las alertas
-      return (
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={4}>
-            <Typography variant="subtitle1" fontWeight="500" sx={{ mb: 2 }}>
-              Alertas de fatiga ({alertasFatiga.length})
-            </Typography>
-            {alertasFatiga.map((alerta, idx) => renderAlertCard(alerta, idx, 'fatiga'))}
-            {alertasFatiga.length === 0 && renderEmptyAlert('No hay alertas de fatiga')}
-          </Grid>
-          
-          <Grid item xs={12} md={4}>
-            <Typography variant="subtitle1" fontWeight="500" sx={{ mb: 2 }}>
-              Alertas de vehículos ({alertasVehiculo.length})
-            </Typography>
-            {alertasVehiculo.map((alerta, idx) => renderAlertCard(alerta, idx, 'vehiculo'))}
-            {alertasVehiculo.length === 0 && renderEmptyAlert('No hay alertas de vehículos')}
-          </Grid>
-          
-          <Grid item xs={12} md={4}>
-            <Typography variant="subtitle1" fontWeight="500" sx={{ mb: 2 }}>
-              Cumplimiento ({alertasCumplimiento.length})
-            </Typography>
-            {alertasCumplimiento.map((alerta, idx) => renderAlertCard(alerta, idx, 'cumplimiento'))}
-            {alertasCumplimiento.length === 0 && renderEmptyAlert('No hay alertas de cumplimiento')}
-          </Grid>
+    return (
+      <Grid container spacing={2}>
+        <Grid item xs={12} md={6}>
+          <Typography variant="subtitle1" fontWeight="500" sx={{ mb: 2 }}>
+            Alertas de vehículos ({alertasVehiculo.length})
+          </Typography>
+          {alertasVehiculo.map((alerta, idx) => renderAlertCard(alerta, idx, 'vehiculo'))}
+          {alertasVehiculo.length === 0 && renderEmptyAlert('No hay alertas de vehículos')}
         </Grid>
-      );
-    } else if (tabValue === 1) { // Fatiga
-      return (
-        <Grid container spacing={2}>
-          {alertasFatiga.map((alerta, idx) => (
-            <Grid item xs={12} sm={6} md={4} key={idx}>
-              {renderAlertCard(alerta, idx, 'fatiga')}
-            </Grid>
-          ))}
-          {alertasFatiga.length === 0 && (
-            <Grid item xs={12}>
-              {renderEmptyAlert('No hay alertas de fatiga', true)}
-            </Grid>
-          )}
+        <Grid item xs={12} md={6}>
+          <Typography variant="subtitle1" fontWeight="500" sx={{ mb: 2 }}>
+            Cumplimiento ({alertasCumplimiento.length})
+          </Typography>
+          {alertasCumplimiento.map((alerta, idx) => renderAlertCard(alerta, idx, 'cumplimiento'))}
+          {alertasCumplimiento.length === 0 && renderEmptyAlert('No hay alertas de cumplimiento')}
         </Grid>
-      );
-    } else if (tabValue === 2) { // Vehículos
-      return (
-        <Grid container spacing={2}>
-          {alertasVehiculo.map((alerta, idx) => (
-            <Grid item xs={12} sm={6} md={4} key={idx}>
-              {renderAlertCard(alerta, idx, 'vehiculo')}
-            </Grid>
-          ))}
-          {alertasVehiculo.length === 0 && (
-            <Grid item xs={12}>
-              {renderEmptyAlert('No hay alertas de vehículos', true)}
-            </Grid>
-          )}
-        </Grid>
-      );
-    } else { // Cumplimiento
-      return (
-        <Grid container spacing={2}>
-          {alertasCumplimiento.map((alerta, idx) => (
-            <Grid item xs={12} sm={6} md={4} key={idx}>
-              {renderAlertCard(alerta, idx, 'cumplimiento')}
-            </Grid>
-          ))}
-          {alertasCumplimiento.length === 0 && (
-            <Grid item xs={12}>
-              {renderEmptyAlert('No hay alertas de cumplimiento', true)}
-            </Grid>
-          )}
-        </Grid>
-      );
-    }
+      </Grid>
+    );
   };
   
   // Estado para modal de motivos

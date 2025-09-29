@@ -38,6 +38,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
 import api from '../services/api';
+import KpiCharts from '../components/common/KpiCharts';
 
 // Componentes estilizados
 const StatusCard = styled(Box)(({ theme, status }) => ({
@@ -127,29 +128,17 @@ export default function Dashboard() {
 
   return (
     <Box>
-      {/* Título principal y descripción */}
+      {/* Título principal */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" sx={{ mb: 1, fontWeight: 500 }}>
-          Sistema de Inspección Vehicular
+          Panel Ejecutivo
         </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-          Plataforma integral de gestión vehicular con IA integrada, análisis predictivo y alertas automáticas para la optimización total de su flota.
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Resumen operativo y estado del sistema. Visualiza el pulso de la operación en tiempo real.
         </Typography>
-        
-        {/* Indicadores de rendimiento */}
-        <Box sx={{ display: 'flex', gap: 3, mb: 2, justifyContent: 'flex-end' }}>
-          <Box sx={{ textAlign: 'right' }}>
-            <Typography variant="h4" sx={{ fontWeight: 'bold' }}>{stats.uptime}</Typography>
-            <Typography variant="body2" color="text.secondary">Uptime</Typography>
-          </Box>
-          <Box sx={{ textAlign: 'right' }}>
-            <Typography variant="h4" sx={{ fontWeight: 'bold' }}>{stats.responseTime}</Typography>
-            <Typography variant="body2" color="text.secondary">Búsqueda</Typography>
-          </Box>
-        </Box>
       </Box>
 
-      {/* Estado del sistema en tiempo real */}
+      {/* Estado del sistema */}
       <Paper 
         elevation={0} 
         sx={{ 
@@ -162,12 +151,11 @@ export default function Dashboard() {
       >
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
           <DashboardIcon sx={{ color: 'primary.main', mr: 1 }} />
-          <Typography variant="h6">Estado del Sistema en Tiempo Real</Typography>
+          <Typography variant="h6">Estado del Sistema</Typography>
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Monitoreo continuo de servicios críticos y conexiones de base de datos
+          Monitoreo de servicios críticos y conexiones principales.
         </Typography>
-
         <Grid container spacing={2}>
           {systemStatusItems.map((item) => (
             <Grid item xs={12} sm={6} md={3} key={item.label}>
@@ -186,148 +174,11 @@ export default function Dashboard() {
         </Grid>
       </Paper>
 
-      {/* Módulos principales */}
-      <Grid container spacing={3}>
-        {/* Dashboard Ejecutivo */}
-        <Grid item xs={12} md={4}>
-          <ModuleCard>
-            <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
-              <Chip label="MEJORADO" size="small" sx={{ backgroundColor: '#ffc107', color: '#333' }} />
-            </Box>
-            <Box sx={{ p: 1, mb: 2 }}>
-              <DashboardIcon sx={{ fontSize: 40, color: 'primary.main', padding: '8px', backgroundColor: '#e3f2fd', borderRadius: '8px' }} />
-            </Box>
-            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>Dashboard Ejecutivo</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Métricas en tiempo real con análisis automático, alertas críticas y tendencias predictivas para toma de decisiones informada.
-            </Typography>
 
-            <List disablePadding sx={{ mb: 2 }}>
-              <FeatureItem>
-                <ListItemIcon sx={{ minWidth: 30 }}>
-                  <CheckCircleOutlineIcon color="primary" fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary="Métricas en tiempo real" />
-              </FeatureItem>
-              <FeatureItem>
-                <ListItemIcon sx={{ minWidth: 30 }}>
-                  <CheckCircleOutlineIcon color="primary" fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary="Análisis predictivo" />
-              </FeatureItem>
-              <FeatureItem>
-                <ListItemIcon sx={{ minWidth: 30 }}>
-                  <CheckCircleOutlineIcon color="primary" fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary="Alertas automáticas" />
-              </FeatureItem>
-            </List>
-
-            <Box sx={{ mt: 'auto' }}>
-              <StyledButton 
-                variant="contained" 
-                fullWidth
-                endIcon={<ArrowForwardIcon />}
-                onClick={() => handleCardClick('/')}
-              >
-                Acceder
-              </StyledButton>
-            </Box>
-          </ModuleCard>
-        </Grid>
-
-        {/* Gestión de Conductores */}
-        <Grid item xs={12} md={4}>
-          <ModuleCard>
-            <Box sx={{ p: 1, mb: 2 }}>
-              <PersonIcon sx={{ fontSize: 40, color: '#2e7d32', padding: '8px', backgroundColor: '#e8f5e9', borderRadius: '8px' }} />
-            </Box>
-            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>Gestión de Conductores</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Control integral de personal con análisis avanzado de fatiga, historial de comportamiento y sistema de alertas proactivo.
-            </Typography>
-
-            <List disablePadding sx={{ mb: 2 }}>
-              <FeatureItem>
-                <ListItemIcon sx={{ minWidth: 30 }}>
-                  <CheckCircleOutlineIcon color="success" fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary="Control de fatiga" />
-              </FeatureItem>
-              <FeatureItem>
-                <ListItemIcon sx={{ minWidth: 30 }}>
-                  <CheckCircleOutlineIcon color="success" fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary="Historial completo" />
-              </FeatureItem>
-              <FeatureItem>
-                <ListItemIcon sx={{ minWidth: 30 }}>
-                  <CheckCircleOutlineIcon color="success" fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary="Alertas proactivas" />
-              </FeatureItem>
-            </List>
-
-            <Box sx={{ mt: 'auto' }}>
-              <StyledButton 
-                variant="contained" 
-                fullWidth
-                color="success" 
-                endIcon={<ArrowForwardIcon />}
-                onClick={() => handleCardClick('/search')}
-              >
-                Acceder
-              </StyledButton>
-            </Box>
-          </ModuleCard>
-        </Grid>
-
-        {/* Control de Vehículos */}
-        <Grid item xs={12} md={4}>
-          <ModuleCard>
-            <Box sx={{ p: 1, mb: 2 }}>
-              <DirectionsCarIcon sx={{ fontSize: 40, color: '#9c27b0', padding: '8px', backgroundColor: '#f3e5f5', borderRadius: '8px' }} />
-            </Box>
-            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>Control de Vehículos</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Monitoreo completo de flotilla con análisis de fallas, mantenimiento predictivo y optimización de recursos.
-            </Typography>
-
-            <List disablePadding sx={{ mb: 2 }}>
-              <FeatureItem>
-                <ListItemIcon sx={{ minWidth: 30 }}>
-                  <CheckCircleOutlineIcon sx={{ color: '#9c27b0' }} fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary="Análisis de fallas" />
-              </FeatureItem>
-              <FeatureItem>
-                <ListItemIcon sx={{ minWidth: 30 }}>
-                  <CheckCircleOutlineIcon sx={{ color: '#9c27b0' }} fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary="Mantenimiento predictivo" />
-              </FeatureItem>
-              <FeatureItem>
-                <ListItemIcon sx={{ minWidth: 30 }}>
-                  <CheckCircleOutlineIcon sx={{ color: '#9c27b0' }} fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary="Optimización" />
-              </FeatureItem>
-            </List>
-
-            <Box sx={{ mt: 'auto' }}>
-              <StyledButton 
-                variant="contained" 
-                fullWidth
-                sx={{ bgcolor: '#9c27b0' }}
-                endIcon={<ArrowForwardIcon />}
-                onClick={() => handleCardClick('/search')}
-              >
-                Acceder
-              </StyledButton>
-            </Box>
-          </ModuleCard>
-        </Grid>
-      </Grid>
+      {/* Gráficas de KPIs */}
+      <Box sx={{ mt: 4, mb: 4 }}>
+        <KpiCharts stats={stats} />
+      </Box>
 
       {/* Métricas de resumen */}
       <Paper sx={{ p: 3, mt: 4, borderRadius: 2 }}>

@@ -1,5 +1,6 @@
 const prisma = require('../config/database');
 const XLSX = require('xlsx');
+const { getMotivoCriticoDetallado } = require('../utils/responseUtils');
 
 module.exports = {
   async getReporteExcel(req, res) {
@@ -69,13 +70,20 @@ module.exports = {
             : 'Fatiga reportada'
         }));
 
-      // Vehículos advertencia
+      // Vehículos advertencia (motivo detallado)
       const vehiculosAdvertencia = inspecciones
-        .filter(i => i.observaciones && i.observaciones.length > 5)
+        .filter(i => {
+          // Considerar advertencia si hay algún campo crítico en falla o hay observaciones
+          const camposCriticos = [
+            'frenos', 'frenos_emergencia', 'cinturones', 'vidrio_frontal', 'espejos',
+            'direccionales', 'limpiaparabrisas', 'altas_bajas', 'llantas', 'testigo'
+          ];
+          return camposCriticos.some(c => i[c] === false) || (i.observaciones && i.observaciones.length > 0);
+        })
         .map(i => ({
           placa: i.placa_vehiculo,
           fecha: new Date(i.fecha).toLocaleDateString(),
-          motivo: i.observaciones
+          motivo: getMotivoCriticoDetallado(i)
         }));
 
       // KPIs y totales para hoja Resumen

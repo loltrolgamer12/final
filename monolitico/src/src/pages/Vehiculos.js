@@ -80,6 +80,12 @@ export default function VehiculosPage() {
             <>
               <Typography variant="subtitle1" sx={{ mb: 1 }}>{detalle.placa} - {detalle.conductor}</Typography>
               <List dense>
+                {detalle.critico && (
+                  <ListItem>
+                    <ListItemIcon><WarningIcon color="error" /></ListItemIcon>
+                    <ListItemText primary={`Motivo crítico: ${detalle.motivoCritico || 'No especificado'}`} />
+                  </ListItem>
+                )}
                 <ListItem>
                   <ListItemIcon><DirectionsCarIcon /></ListItemIcon>
                   <ListItemText primary={`Placa: ${detalle.placa}`} />

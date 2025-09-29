@@ -54,51 +54,42 @@ router.get('/conductores', async (req, res) => {
 	}
 });
 
+// Utilidad para motivo crítico de vehículo (detallado)
+
+const { getMotivoCriticoDetallado } = require('../utils/responseUtils');
+
 // Dashboard ejecutivo de vehículos
 router.get('/vehiculos', async (req, res) => {
 	try {
-		   // Agrupar inspecciones por vehículo
-		   const vehiculos = await prisma.inspeccion.groupBy({
-			   by: ['placa_vehiculo', 'conductor_nombre'],
-			   _count: { id: true },
-			   _max: { nivel_riesgo: true, fecha: true },
-		   });
-		   // Mapear a formato frontend con motivoCritico
-		   const componentesCriticos = [
-			   'frenos', 'frenos_emergencia', 'cinturones', 'vidrio_frontal', 'espejos', 'direccionales', 'limpiaparabrisas', 'altas_bajas'
-		   ];
-		   const data = await Promise.all(vehiculos.map(async v => {
-			   let motivoCritico = '';
-			   if (v._max.nivel_riesgo === 'ALTO') {
-				   // Buscar la última inspección crítica de ese vehículo
-				   const ultima = await prisma.inspeccion.findFirst({
-					   where: {
-						   placa_vehiculo: v.placa_vehiculo,
-						   conductor_nombre: v.conductor_nombre,
-						   nivel_riesgo: 'ALTO',
-						   fecha: v._max.fecha
-					   },
-					   orderBy: { fecha: 'desc' }
-				   });
-				   if (ultima) {
-					   let componentesMal = componentesCriticos.filter(c => ultima[c] === false);
-					   let motivos = [];
-					   if (componentesMal.length) motivos.push('Componentes: ' + componentesMal.join(', '));
-					   if (ultima.observaciones) motivos.push('Observaciones: ' + ultima.observaciones);
-					   if (motivos.length === 0) motivos.push('Riesgo alto detectado');
-					   motivoCritico = motivos.join('; ');
-				   }
-			   }
-			   return {
-				   placa: v.placa_vehiculo,
-				   conductor: v.conductor_nombre,
-				   alertas: v._count.id,
-				   critico: v._max.nivel_riesgo === 'ALTO',
-				   cumplimiento: v._max.nivel_riesgo !== 'ALTO',
-				   motivoCritico
-			   };
-		   }));
-		   return responseUtils.successResponse(res, data);
+		const vehiculos = await prisma.inspeccion.groupBy({
+			by: ['placa_vehiculo', 'conductor_nombre'],
+			_count: { id: true },
+			_max: { nivel_riesgo: true, fecha: true },
+		});
+		const data = await Promise.all(vehiculos.map(async v => {
+			let motivoCritico = '';
+			if (v._max.nivel_riesgo === 'ALTO') {
+				const ultima = await prisma.inspeccion.findFirst({
+					where: {
+						placa_vehiculo: v.placa_vehiculo,
+						conductor_nombre: v.conductor_nombre,
+						nivel_riesgo: 'ALTO',
+						fecha: v._max.fecha
+					},
+					orderBy: { fecha: 'desc' }
+				});
+				motivoCritico = ultima ? getMotivoCriticoDetallado(ultima) : '';
+			}
+			return {
+				placa: v.placa_vehiculo,
+				conductor: v.conductor_nombre,
+				alertas: v._count.id,
+				critico: v._max.nivel_riesgo === 'ALTO',
+				cumplimiento: v._max.nivel_riesgo !== 'ALTO',
+				motivoCritico
+			};
+		}));
+		return responseUtils.successResponse(res, data);
 	} catch (error) {
 		return responseUtils.errorResponse(res, 'VEHICULOS_DASHBOARD_ERROR', error.message);
 	}
@@ -108,11 +99,16 @@ router.get('/vehiculos', async (req, res) => {
 // Dashboard KPIs y tendencias
 router.get('/', async (req, res) => {
 	try {
-		const totalInspecciones = await prisma.inspeccion.count();
-		const totalAlertas = await prisma.inspeccion.count({ where: { tiene_alertas_criticas: true } });
-		const bajoRiesgo = await prisma.inspeccion.count({ where: { nivel_riesgo: 'BAJO' } });
-		const medioRiesgo = await prisma.inspeccion.count({ where: { nivel_riesgo: 'MEDIO' } });
-		const altoRiesgo = await prisma.inspeccion.count({ where: { nivel_riesgo: 'ALTO' } });
+	// Total de inspecciones
+	const totalInspecciones = await prisma.inspeccion.count();
+	// Total de alertas críticas
+	const totalAlertas = await prisma.inspeccion.count({ where: { tiene_alertas_criticas: true } });
+	// Inspecciones en condiciones normales: sin alertas críticas y nivel_riesgo BAJO
+	const bajoRiesgo = await prisma.inspeccion.count({ where: { nivel_riesgo: 'BAJO', tiene_alertas_criticas: false } });
+	// Inspecciones con riesgo medio (pueden o no tener alerta crítica)
+	const medioRiesgo = await prisma.inspeccion.count({ where: { nivel_riesgo: 'MEDIO' } });
+	// Inspecciones con riesgo alto (pueden o no tener alerta crítica)
+	const altoRiesgo = await prisma.inspeccion.count({ where: { nivel_riesgo: 'ALTO' } });
 
 		// Tendencia de inspecciones por día (últimos 7 días)
 		const desde = new Date();

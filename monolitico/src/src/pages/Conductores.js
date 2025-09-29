@@ -80,6 +80,12 @@ export default function ConductoresPage() {
             <>
               <Typography variant="subtitle1" sx={{ mb: 1 }}>{detalle.nombre} - {detalle.placa}</Typography>
               <List dense>
+                {detalle.fatiga && (
+                  <ListItem>
+                    <ListItemIcon><WarningIcon color="error" /></ListItemIcon>
+                    <ListItemText primary={`Motivo de fatiga: ${detalle.motivoFatiga || 'No especificado'}`} />
+                  </ListItem>
+                )}
                 <ListItem>
                   <ListItemIcon><PersonIcon /></ListItemIcon>
                   <ListItemText primary={`Nombre: ${detalle.nombre}`} />
