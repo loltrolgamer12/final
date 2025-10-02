@@ -32,11 +32,14 @@ module.exports = {
       }
 
       // Inspecciones en el rango
-      const inspecciones = await prisma.inspeccion.findMany({
-        where: {
-          fecha: { gte: desde, lt: hasta }
-        }
-      });
+      const { tipo = 'ligero', contrato, campo } = req.query;
+      const tabla = tipo === 'pesado' ? prisma.inspeccionPesado : prisma.inspeccion;
+      const where = {
+        fecha: { gte: desde, lt: hasta }
+      };
+      if (contrato) where.contrato = contrato;
+      if (campo) where.campo_coordinacion = campo;
+      const inspecciones = await tabla.findMany({ where });
 
       // Incumplimiento de conductores
       const conductores = {};

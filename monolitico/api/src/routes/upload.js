@@ -11,7 +11,8 @@ router.post('/', upload.single('file'), async (req, res) => {
 			return responseUtils.errorResponse(res, 'NO_FILE', 'No se envió ningún archivo');
 		}
 		const { buffer, originalname } = req.file;
-		const result = await excelService.processExcelFile(buffer, originalname);
+		const tipo = req.body.tipo || 'ligero';
+		const result = await excelService.processExcelFile(buffer, originalname, { tipo });
 		if (result.success) {
 			return responseUtils.successResponse(res, {
 				mensaje: 'Archivo procesado correctamente',

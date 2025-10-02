@@ -7,48 +7,81 @@ const responseUtils = require('../utils/responseUtils');
 // Dashboard ejecutivo de conductores
 router.get('/conductores', async (req, res) => {
 	try {
-		   // Agrupar inspecciones por conductor
-		   const conductores = await prisma.inspeccion.groupBy({
-			   by: ['conductor_nombre', 'placa_vehiculo'],
-			   _count: { id: true },
-			   _max: { nivel_riesgo: true, fecha: true },
-		   });
+		// Filtros avanzados por query
+		const { dia, mes, ano, conductor, placa, cumplimiento, fatiga } = req.query;
+		let fechaFiltro = {};
+		if (ano && mes && dia) {
+			// Día exacto
+			const mesStr = mes.toString().padStart(2, '0');
+			const diaStr = dia.toString().padStart(2, '0');
+			const desde = new Date(`${ano}-${mesStr}-${diaStr}`);
+			const hasta = new Date(desde);
+			hasta.setDate(hasta.getDate() + 1);
+			fechaFiltro = { gte: desde, lt: hasta };
+		} else if (ano && mes) {
+			// Mes completo
+			const mesStr = mes.toString().padStart(2, '0');
+			const desde = new Date(`${ano}-${mesStr}-01`);
+			const hasta = new Date(desde);
+			hasta.setMonth(hasta.getMonth() + 1);
+			fechaFiltro = { gte: desde, lt: hasta };
+		} else if (ano) {
+			// Año completo
+			const desde = new Date(`${ano}-01-01`);
+			const hasta = new Date(`${ano}-12-31`);
+			hasta.setDate(hasta.getDate() + 1);
+			fechaFiltro = { gte: desde, lt: hasta };
+		}
 
-		   // Obtener motivo de fatiga de la última inspección si aplica
-		   const data = await Promise.all(conductores.map(async c => {
-			   let motivoFatiga = '';
-			   if (c._max.nivel_riesgo === 'ALTO') {
-				   // Buscar la última inspección de ese conductor y placa
-				   const ultima = await prisma.inspeccion.findFirst({
-					   where: {
-						   conductor_nombre: c.conductor_nombre,
-						   placa_vehiculo: c.placa_vehiculo,
-						   nivel_riesgo: 'ALTO',
-						   fecha: c._max.fecha
-					   },
-					   orderBy: { fecha: 'desc' }
-				   });
-				   if (ultima) {
-					   let motivos = [];
-					   if (ultima.consumo_medicamentos) motivos.push('Consumo de medicamentos');
-					   if (ultima.horas_sueno_suficientes === false) motivos.push('Falta de sueño');
-					   if (ultima.libre_sintomas_fatiga === false) motivos.push('Síntomas de fatiga');
-					   if (ultima.condiciones_aptas === false) motivos.push('No apto para conducir');
-					   if (ultima.puntaje_fatiga < 2) motivos.push('Puntaje de fatiga bajo');
-					   if (motivos.length === 0) motivos.push('Riesgo alto detectado');
-					   motivoFatiga = motivos.join(', ');
-				   }
-			   }
-			   return {
-				   nombre: c.conductor_nombre,
-				   placa: c.placa_vehiculo,
-				   alertas: c._count.id,
-				   fatiga: c._max.nivel_riesgo === 'ALTO',
-				   cumplimiento: c._max.nivel_riesgo !== 'ALTO',
-				   motivoFatiga
-			   };
-		   }));
-		   return responseUtils.successResponse(res, data);
+		// Construir filtro para findMany
+		let where = {};
+		if (Object.keys(fechaFiltro).length) where.fecha = fechaFiltro;
+		if (conductor) where.conductor_nombre = { contains: conductor, mode: 'insensitive' };
+		if (placa) where.placa_vehiculo = { contains: placa, mode: 'insensitive' };
+		if (cumplimiento === 'true') where.nivel_riesgo = { not: 'ALTO' };
+		if (cumplimiento === 'false') where.nivel_riesgo = 'ALTO';
+		if (fatiga === 'true') where.nivel_riesgo = 'ALTO';
+		if (fatiga === 'false') where.nivel_riesgo = { not: 'ALTO' };
+
+		// Buscar inspecciones filtradas
+		const inspecciones = await prisma.inspeccion.findMany({ where });
+		// Agrupar por conductor y placa
+		const agrupadas = {};
+		for (const i of inspecciones) {
+			const key = `${i.conductor_nombre}||${i.placa_vehiculo}`;
+			if (!agrupadas[key]) {
+				agrupadas[key] = {
+					nombre: i.conductor_nombre,
+					placa: i.placa_vehiculo,
+					alertas: 0,
+					fatiga: false,
+					cumplimiento: true,
+					motivoFatiga: ''
+				};
+			}
+			agrupadas[key].alertas++;
+			if (i.nivel_riesgo === 'ALTO') {
+				agrupadas[key].fatiga = true;
+				agrupadas[key].cumplimiento = false;
+				// Motivo fatiga solo de la última inspección ALTO
+				if (!agrupadas[key].motivoFatiga || new Date(i.fecha) > new Date(agrupadas[key].fechaFatiga || 0)) {
+					let motivos = [];
+					if (i.consumo_medicamentos) motivos.push('Consumo de medicamentos');
+					if (i.horas_sueno_suficientes === false) motivos.push('Falta de sueño');
+					if (i.libre_sintomas_fatiga === false) motivos.push('Síntomas de fatiga');
+					if (i.condiciones_aptas === false) motivos.push('No apto para conducir');
+					if (i.puntaje_fatiga < 2) motivos.push('Puntaje de fatiga bajo');
+					if (motivos.length === 0) motivos.push('Riesgo alto detectado');
+					agrupadas[key].motivoFatiga = motivos.join(', ');
+					agrupadas[key].fechaFatiga = i.fecha;
+				}
+			}
+		}
+		const data = Object.values(agrupadas).map(c => {
+			delete c.fechaFatiga;
+			return c;
+		});
+		return responseUtils.successResponse(res, data);
 	} catch (error) {
 		return responseUtils.errorResponse(res, 'CONDUCTORES_DASHBOARD_ERROR', error.message);
 	}
@@ -60,55 +93,124 @@ const { getMotivoCriticoDetallado } = require('../utils/responseUtils');
 
 // Dashboard ejecutivo de vehículos
 router.get('/vehiculos', async (req, res) => {
-	try {
-		const vehiculos = await prisma.inspeccion.groupBy({
-			by: ['placa_vehiculo', 'conductor_nombre'],
-			_count: { id: true },
-			_max: { nivel_riesgo: true, fecha: true },
-		});
-		const data = await Promise.all(vehiculos.map(async v => {
-			let motivoCritico = '';
-			if (v._max.nivel_riesgo === 'ALTO') {
-				const ultima = await prisma.inspeccion.findFirst({
-					where: {
-						placa_vehiculo: v.placa_vehiculo,
-						conductor_nombre: v.conductor_nombre,
-						nivel_riesgo: 'ALTO',
-						fecha: v._max.fecha
-					},
-					orderBy: { fecha: 'desc' }
-				});
-				motivoCritico = ultima ? getMotivoCriticoDetallado(ultima) : '';
+		try {
+			// Filtros avanzados por query
+			const { dia, mes, ano, conductor, placa, cumplimiento, critico } = req.query;
+			let fechaFiltro = {};
+			if (ano && mes && dia) {
+				// Día exacto
+				const mesStr = mes.toString().padStart(2, '0');
+				const diaStr = dia.toString().padStart(2, '0');
+				const desde = new Date(`${ano}-${mesStr}-${diaStr}`);
+				const hasta = new Date(desde);
+				hasta.setDate(hasta.getDate() + 1);
+				fechaFiltro = { gte: desde, lt: hasta };
+			} else if (ano && mes) {
+				// Mes completo
+				const mesStr = mes.toString().padStart(2, '0');
+				const desde = new Date(`${ano}-${mesStr}-01`);
+				const hasta = new Date(desde);
+				hasta.setMonth(hasta.getMonth() + 1);
+				fechaFiltro = { gte: desde, lt: hasta };
+			} else if (ano) {
+				// Año completo
+				const desde = new Date(`${ano}-01-01`);
+				const hasta = new Date(`${ano}-12-31`);
+				hasta.setDate(hasta.getDate() + 1);
+				fechaFiltro = { gte: desde, lt: hasta };
 			}
-			return {
-				placa: v.placa_vehiculo,
-				conductor: v.conductor_nombre,
-				alertas: v._count.id,
-				critico: v._max.nivel_riesgo === 'ALTO',
-				cumplimiento: v._max.nivel_riesgo !== 'ALTO',
-				motivoCritico
-			};
-		}));
-		return responseUtils.successResponse(res, data);
-	} catch (error) {
-		return responseUtils.errorResponse(res, 'VEHICULOS_DASHBOARD_ERROR', error.message);
-	}
+
+			// Construir filtro para findMany
+			let where = {};
+			if (Object.keys(fechaFiltro).length) where.fecha = fechaFiltro;
+			if (conductor) where.conductor_nombre = { contains: conductor, mode: 'insensitive' };
+			if (placa) where.placa_vehiculo = { contains: placa, mode: 'insensitive' };
+			if (cumplimiento === 'true') where.nivel_riesgo = { not: 'ALTO' };
+			if (cumplimiento === 'false') where.nivel_riesgo = 'ALTO';
+			if (critico === 'true') where.nivel_riesgo = 'ALTO';
+			if (critico === 'false') where.nivel_riesgo = { not: 'ALTO' };
+
+			// Buscar inspecciones filtradas
+			const inspecciones = await prisma.inspeccion.findMany({ where });
+			// Agrupar por placa y conductor
+			const agrupadas = {};
+			for (const i of inspecciones) {
+				const key = `${i.placa_vehiculo}||${i.conductor_nombre}`;
+				if (!agrupadas[key]) {
+					agrupadas[key] = {
+						placa: i.placa_vehiculo,
+						conductor: i.conductor_nombre,
+						alertas: 0,
+						critico: false,
+						cumplimiento: true,
+						motivoCritico: ''
+					};
+				}
+				agrupadas[key].alertas++;
+				if (i.nivel_riesgo === 'ALTO') {
+					agrupadas[key].critico = true;
+					agrupadas[key].cumplimiento = false;
+					// Motivo crítico solo de la última inspección ALTO
+					if (!agrupadas[key].motivoCritico || new Date(i.fecha) > new Date(agrupadas[key].fechaCritico || 0)) {
+						agrupadas[key].motivoCritico = getMotivoCriticoDetallado(i);
+						agrupadas[key].fechaCritico = i.fecha;
+					}
+				}
+			}
+					const data = Object.values(agrupadas).map(v => {
+						delete v.fechaCritico;
+						return v;
+					});
+					return responseUtils.successResponse(res, data);
+				} catch (error) {
+					return responseUtils.errorResponse(res, 'VEHICULOS_DASHBOARD_ERROR', error.message);
+				}
 });
 // (eliminado duplicado)
 
 // Dashboard KPIs y tendencias
 router.get('/', async (req, res) => {
 	try {
-	// Total de inspecciones
-	const totalInspecciones = await prisma.inspeccion.count();
-	// Total de alertas críticas
-	const totalAlertas = await prisma.inspeccion.count({ where: { tiene_alertas_criticas: true } });
-	// Inspecciones en condiciones normales: sin alertas críticas y nivel_riesgo BAJO
-	const bajoRiesgo = await prisma.inspeccion.count({ where: { nivel_riesgo: 'BAJO', tiene_alertas_criticas: false } });
-	// Inspecciones con riesgo medio (pueden o no tener alerta crítica)
-	const medioRiesgo = await prisma.inspeccion.count({ where: { nivel_riesgo: 'MEDIO' } });
-	// Inspecciones con riesgo alto (pueden o no tener alerta crítica)
-	const altoRiesgo = await prisma.inspeccion.count({ where: { nivel_riesgo: 'ALTO' } });
+		// Total de inspecciones
+		const totalInspecciones = await prisma.inspeccion.count();
+		// Total de alertas críticas
+		const totalAlertas = await prisma.inspeccion.count({ where: { tiene_alertas_criticas: true } });
+		// Inspecciones en condiciones normales: sin alertas críticas y nivel_riesgo BAJO
+		const bajoRiesgo = await prisma.inspeccion.count({ where: { nivel_riesgo: 'BAJO', tiene_alertas_criticas: false } });
+		// Inspecciones con riesgo medio (pueden o no tener alerta crítica)
+		const medioRiesgo = await prisma.inspeccion.count({ where: { nivel_riesgo: 'MEDIO' } });
+		// Inspecciones con riesgo alto (pueden o no tener alerta crítica)
+		const altoRiesgo = await prisma.inspeccion.count({ where: { nivel_riesgo: 'ALTO' } });
+
+		// Datos rechazados y motivos de rechazo
+		const totalRechazadosLigero = await prisma.rechazoInspeccion.count();
+		const totalRechazadosPesado = await prisma.rechazoInspeccionPesado.count();
+		const totalRechazados = totalRechazadosLigero + totalRechazadosPesado;
+
+		// Motivos de rechazo agrupados (top 5)
+		const motivosLigero = await prisma.rechazoInspeccion.groupBy({
+			by: ['motivo_rechazo'],
+			_count: { motivo_rechazo: true },
+			orderBy: { _count: { motivo_rechazo: 'desc' } },
+			take: 5
+		});
+		const motivosPesado = await prisma.rechazoInspeccionPesado.groupBy({
+			by: ['motivo_rechazo'],
+			_count: { motivo_rechazo: true },
+			orderBy: { _count: { motivo_rechazo: 'desc' } },
+			take: 5
+		});
+		// Unir y agrupar motivos
+		const motivosMap = {};
+		[...motivosLigero, ...motivosPesado].forEach(m => {
+			const motivo = m.motivo_rechazo || 'Sin motivo';
+			motivosMap[motivo] = (motivosMap[motivo] || 0) + m._count.motivo_rechazo;
+		});
+		// Convertir a array y ordenar
+		const motivosRechazo = Object.entries(motivosMap)
+			.map(([motivo, count]) => ({ motivo, count }))
+			.sort((a, b) => b.count - a.count)
+			.slice(0, 5);
 
 		// Tendencia de inspecciones por día (últimos 7 días)
 		const desde = new Date();
@@ -147,8 +249,10 @@ router.get('/', async (req, res) => {
 			bajoRiesgo,
 			medioRiesgo,
 			altoRiesgo,
-			tendencia,
-			topConductores
+		tendencia,
+		topConductores,
+		totalRechazados,
+		motivosRechazo
 		});
 	} catch (error) {
 		console.error('DASHBOARD_ERROR:', error);

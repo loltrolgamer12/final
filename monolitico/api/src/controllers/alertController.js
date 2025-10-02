@@ -17,8 +17,10 @@ module.exports = {
       const { tipo, fechaInicio, fechaFin } = req.query;
       const alertas = [];
 
+      // Seleccionar tabla según tipo
+      const tabla = tipo === 'pesado' ? prisma.inspeccionPesado : prisma.inspeccion;
       // 1. Conductores con fatiga (nivel de riesgo ALTO o puntaje fatiga bajo)
-      const fatiga = await prisma.inspeccion.findMany({
+      const fatiga = await tabla.findMany({
         where: {
           OR: [
             { nivel_riesgo: 'ALTO' },
@@ -49,7 +51,7 @@ module.exports = {
       });
 
       // 2. Vehículos dañados (componentes críticos en mal estado o observaciones relevantes)
-      const vehiculos = await prisma.inspeccion.findMany({
+      const vehiculos = await tabla.findMany({
         where: {
           OR: [
             ...componentesCriticos.map(c => ({ [c]: false })),

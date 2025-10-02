@@ -1,3 +1,170 @@
+model InspeccionPesado {
+  id                  Int      @id @default(autoincrement())
+  marca_temporal      DateTime
+  nombre_inspector    String
+  contrato            String
+  campo_coordinacion  String
+  placa_vehiculo      String
+  kilometraje         Int
+  turno               String
+  altas_bajas         Boolean
+  direccionales       Boolean
+  parqueo             Boolean
+  freno               Boolean
+  reversa_alarma      Boolean
+  espejos             Boolean
+  vidrio_frontal      Boolean
+  presentacion_aseo   Boolean
+  pito                Boolean
+  gps                 Boolean
+  cinturones          Boolean
+  puertas             Boolean
+  vidrios             Boolean
+  limpiaparabrisas    Boolean
+  extintor            Boolean
+  botiquin            Boolean
+  tapiceria           Boolean
+  indicadores         Boolean
+  objetos_sueltos     Boolean
+  frenos              Boolean
+  frenos_emergencia   Boolean
+  fugas_aire          Boolean
+  control_fugas_aire  Boolean
+  candados_bandas     Boolean
+  acoples_tomas       Boolean
+  nivel_aceite_motor  Boolean
+  nivel_fluido_frenos Boolean
+  nivel_fluido_dir_hidraulica Boolean
+  nivel_fluido_refrigerante Boolean
+  nivel_fluido_limpia_parabrisas Boolean
+  correas             Boolean
+  baterias            Boolean
+  llantas_labrado     Boolean
+  llantas_sin_cortes  Boolean
+  llanta_repuesto     Boolean
+  copas_pernos        Boolean
+  suspension          Boolean
+  direccion           Boolean
+  tapa_tanque         Boolean
+  equipo_carretera    Boolean
+  kit_ambiental       Boolean
+  documentacion       Boolean
+  observaciones       String?
+  horas_sueno_suficientes Boolean
+  libre_sintomas_fatiga Boolean
+  condiciones_aptas   Boolean
+  consumo_medicamentos Boolean
+  fecha               DateTime
+  nivel_riesgo        String
+  puntaje_total       Int
+  puntaje_fatiga      Int
+  tiene_alertas_criticas Boolean
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  @@unique([placa_vehiculo, fecha, nombre_inspector])
+}
+
+model RechazoInspeccionPesado {
+  id                  Int      @id @default(autoincrement())
+  marca_temporal      DateTime?
+  nombre_inspector    String?
+  contrato            String?
+  campo_coordinacion  String?
+  placa_vehiculo      String?
+  kilometraje         Int?
+  turno               String?
+  altas_bajas         Boolean?
+  direccionales       Boolean?
+  parqueo             Boolean?
+  freno               Boolean?
+  reversa_alarma      Boolean?
+  espejos             Boolean?
+  vidrio_frontal      Boolean?
+  presentacion_aseo   Boolean?
+  pito                Boolean?
+  gps                 Boolean?
+  cinturones          Boolean?
+  puertas             Boolean?
+  vidrios             Boolean?
+  limpiaparabrisas    Boolean?
+  extintor            Boolean?
+  botiquin            Boolean?
+  tapiceria           Boolean?
+  indicadores         Boolean?
+  objetos_sueltos     Boolean?
+  frenos              Boolean?
+  frenos_emergencia   Boolean?
+  fugas_aire          Boolean?
+  control_fugas_aire  Boolean?
+  candados_bandas     Boolean?
+  acoples_tomas       Boolean?
+  nivel_aceite_motor  Boolean?
+  nivel_fluido_frenos Boolean?
+  nivel_fluido_dir_hidraulica Boolean?
+  nivel_fluido_refrigerante Boolean?
+  nivel_fluido_limpia_parabrisas Boolean?
+  correas             Boolean?
+  baterias            Boolean?
+  llantas_labrado     Boolean?
+  llantas_sin_cortes  Boolean?
+  llanta_repuesto     Boolean?
+  copas_pernos        Boolean?
+  suspension          Boolean?
+  direccion           Boolean?
+  tapa_tanque         Boolean?
+  equipo_carretera    Boolean?
+  kit_ambiental       Boolean?
+  documentacion       Boolean?
+  observaciones       String?
+  horas_sueno_suficientes Boolean?
+  libre_sintomas_fatiga Boolean?
+  condiciones_aptas   Boolean?
+  consumo_medicamentos Boolean?
+  fecha               DateTime?
+  nivel_riesgo        String?
+  puntaje_total       Int?
+  puntaje_fatiga      Int?
+  tiene_alertas_criticas Boolean?
+  motivo_rechazo      String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+model RechazoInspeccion {
+  id                  Int      @id @default(autoincrement())
+  fecha               DateTime?
+  marca_temporal      DateTime?
+  turno               String?
+  conductor_nombre    String?
+  placa_vehiculo      String?
+  kilometraje         Int?
+  contrato            String?
+  campo_coordinacion  String?
+  consumo_medicamentos Boolean?
+  horas_sueno_suficientes Boolean?
+  libre_sintomas_fatiga Boolean?
+  condiciones_aptas   Boolean?
+  altas_bajas         Boolean?
+  direccionales       Boolean?
+  parqueo             Boolean?
+  freno               Boolean?
+  reversa             Boolean?
+  espejos             Boolean?
+  vidrio_frontal      Boolean?
+  frenos              Boolean?
+  frenos_emergencia   Boolean?
+  cinturones          Boolean?
+  puertas             Boolean?
+  vidrios             Boolean?
+  limpiaparabrisas    Boolean?
+  observaciones       String?
+  nivel_riesgo        String?
+  puntaje_total       Int?
+  puntaje_fatiga      Int?
+  tiene_alertas_criticas Boolean?
+  motivo_rechazo      String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
 // Modelo inicial para HQ-FO-40
 // Se debe ajustar según los campos reales y migrar con Prisma
 
@@ -45,6 +212,7 @@ model Inspeccion {
   tiene_alertas_criticas Boolean
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+  @@unique([placa_vehiculo, fecha, conductor_nombre])
 }
 
 model ArchivoProcesado {

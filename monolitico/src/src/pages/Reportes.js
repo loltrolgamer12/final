@@ -90,6 +90,19 @@ export default function ReportesPage() {
   const [reporte, setReporte] = useState(null);
   const [error, setError] = useState(null);
   const [exportLoading, setExportLoading] = useState(false);
+  const [tipo, setTipo] = useState(''); // El usuario debe elegir explícitamente
+  const [contrato, setContrato] = useState('');
+  const [campo, setCampo] = useState('');
+  const [contratoOptions, setContratoOptions] = useState([]);
+  const [campoOptions, setCampoOptions] = useState([]);
+
+  useEffect(() => {
+    // Obtener opciones de contrato y campo al montar
+    axios.get('/api/filtros/vehiculos').then(res => {
+      setContratoOptions(res.data.data.contratos || []);
+      setCampoOptions(res.data.data.campos || []);
+    });
+  }, []);
 
   // Meses y años disponibles para selección
   const meses = [
@@ -106,16 +119,16 @@ export default function ReportesPage() {
       setError('Seleccione mes y año para generar el reporte');
       return;
     }
-    
     setLoading(true);
     setError(null);
     setReporte(null);
-    
     try {
       let url = `/api/reportes?mes=${mes}&ano=${ano}`;
       if (diaInicio) url += `&diaInicio=${diaInicio}`;
       if (diaFin) url += `&diaFin=${diaFin}`;
-      
+  if (tipo && tipo !== 'todos') url += `&tipo=${tipo}`;
+      if (contrato) url += `&contrato=${encodeURIComponent(contrato)}`;
+      if (campo) url += `&campo=${encodeURIComponent(campo)}`;
       const res = await axios.get(url);
       setReporte(res.data.data);
     } catch (err) {
@@ -266,6 +279,54 @@ export default function ReportesPage() {
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={4}>
                   <FormControl fullWidth variant="outlined" size="medium">
+                    <InputLabel id="tipo-label">Tipo</InputLabel>
+                    <StyledSelect
+                      labelId="tipo-label"
+                      value={tipo}
+                      onChange={e => setTipo(e.target.value)}
+                      label="Tipo"
+                    >
+                      <MenuItem value=""><em>Selecciona tipo...</em></MenuItem>
+                      <MenuItem value="todos">Todos</MenuItem>
+                      <MenuItem value="ligero">Ligero</MenuItem>
+                      <MenuItem value="pesado">Pesado</MenuItem>
+                    </StyledSelect>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel shrink>Contrato</InputLabel>
+                    <Select
+                      label="Contrato"
+                      value={contrato}
+                      onChange={e => setContrato(e.target.value)}
+                      displayEmpty
+                    >
+                      <MenuItem value=""><em>Todos</em></MenuItem>
+                      {contratoOptions.map((c) => (
+                        <MenuItem key={c} value={c}>{c}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel shrink>Campo/Coordinación</InputLabel>
+                    <Select
+                      label="Campo/Coordinación"
+                      value={campo}
+                      onChange={e => setCampo(e.target.value)}
+                      displayEmpty
+                    >
+                      <MenuItem value=""><em>Todos</em></MenuItem>
+                      {campoOptions.map((c) => (
+                        <MenuItem key={c} value={c}>{c}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <FormControl fullWidth variant="outlined" size="medium">
                     <InputLabel id="mes-label">Mes</InputLabel>
                     <StyledSelect
                       labelId="mes-label"
@@ -307,7 +368,6 @@ export default function ReportesPage() {
                       placeholder="Opcional"
                       fullWidth
                     />
-                    
                     <TextField
                       label="Día fin"
                       type="number"

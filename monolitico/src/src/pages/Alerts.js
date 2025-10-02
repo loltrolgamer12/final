@@ -86,6 +86,7 @@ export default function AlertsPage() {
   const [error, setError] = useState(null);
   const [tabValue, setTabValue] = useState(0);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [tipo, setTipo] = useState('');
   
   // Carga inicial de alertas
   useEffect(() => {
@@ -98,8 +99,10 @@ export default function AlertsPage() {
     setError(null);
     
     try {
-      const res = await axios.get('/api/alerts');
-      setAlertas(res.data.data);
+  let url = '/api/alerts';
+  if (tipo && tipo !== 'todos') url += `?tipo=${tipo}`;
+  const res = await axios.get(url);
+  setAlertas(res.data.data);
       setLastUpdated(new Date());
     } catch (error) {
       console.error('Error al cargar alertas:', error);
@@ -121,22 +124,41 @@ export default function AlertsPage() {
   // Contenido según pestaña seleccionada
   const alertContent = () => {
     return (
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={6}>
-          <Typography variant="subtitle1" fontWeight="500" sx={{ mb: 2 }}>
-            Alertas de vehículos ({alertasVehiculo.length})
-          </Typography>
-          {alertasVehiculo.map((alerta, idx) => renderAlertCard(alerta, idx, 'vehiculo'))}
-          {alertasVehiculo.length === 0 && renderEmptyAlert('No hay alertas de vehículos')}
+      <>
+        <Box sx={{ mb: 2 }}>
+          <FormControl sx={{ minWidth: 180 }}>
+            <InputLabel id="tipo-label" shrink>Tipo</InputLabel>
+            <Select
+              labelId="tipo-label"
+              id="tipo-select"
+              value={tipo}
+              label="Tipo"
+              onChange={e => setTipo(e.target.value)}
+              displayEmpty
+            >
+              <MenuItem value=""><em>Selecciona tipo...</em></MenuItem>
+              <MenuItem value="ligero">Ligero</MenuItem>
+              <MenuItem value="pesado">Pesado</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle1" fontWeight="500" sx={{ mb: 2 }}>
+              Alertas de vehículos ({alertasVehiculo.length})
+            </Typography>
+            {alertasVehiculo.map((alerta, idx) => renderAlertCard(alerta, idx, 'vehiculo'))}
+            {alertasVehiculo.length === 0 && renderEmptyAlert('No hay alertas de vehículos')}
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle1" fontWeight="500" sx={{ mb: 2 }}>
+              Cumplimiento ({alertasCumplimiento.length})
+            </Typography>
+            {alertasCumplimiento.map((alerta, idx) => renderAlertCard(alerta, idx, 'cumplimiento'))}
+            {alertasCumplimiento.length === 0 && renderEmptyAlert('No hay alertas de cumplimiento')}
+          </Grid>
         </Grid>
-        <Grid item xs={12} md={6}>
-          <Typography variant="subtitle1" fontWeight="500" sx={{ mb: 2 }}>
-            Cumplimiento ({alertasCumplimiento.length})
-          </Typography>
-          {alertasCumplimiento.map((alerta, idx) => renderAlertCard(alerta, idx, 'cumplimiento'))}
-          {alertasCumplimiento.length === 0 && renderEmptyAlert('No hay alertas de cumplimiento')}
-        </Grid>
-      </Grid>
+      </>
     );
   };
   

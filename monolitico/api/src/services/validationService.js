@@ -2,10 +2,12 @@ const placaRegex = /^[A-Z]{2,4}\s?\d{2,5}$/i;
 const fechaRegex = /^(\d{4}-\d{2}-\d{2}|\d{4}\/\d{2}\/\d{2}|\d{2}\/\d{2}\/\d{4})/;
 
 function normalizeBoolean(value) {
+  if (value === true || value === 1) return true;
+  if (value === false || value === 0) return false;
   if (typeof value !== 'string') return false;
   const v = value.trim().toUpperCase();
-  if (["CUMPLE","SI","SÍ","TRUE","OK"].includes(v)) return true;
-  if (["NO CUMPLE","NO","FALSE","NA","NAN",""].includes(v)) return false;
+  if (["CUMPLE","SI","SÍ","TRUE","OK","X","1","YES","VERDADERO","Y"].includes(v)) return true;
+  if (["NO CUMPLE","NO","FALSE","NA","NAN","0","FALSO","N",""].includes(v)) return false;
   return false;
 }
 

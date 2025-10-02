@@ -106,6 +106,7 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searched, setSearched] = useState(false);
+  const [tipo, setTipo] = useState('');
 
   // Realizar búsqueda
   const handleSearch = async (opts = {}) => {
@@ -132,7 +133,9 @@ export default function SearchPage() {
     setError(null);
     setSearched(true);
     try {
-      const res = await api.get('/search', { params: { query } });
+      const params = { query };
+      if (tipo && tipo !== 'todos') params.tipo = tipo;
+      const res = await api.get('/search', { params });
       setResults(res.data.data);
     } catch (err) {
       setError('Error en la búsqueda. Por favor, intente nuevamente.');
@@ -184,7 +187,21 @@ export default function SearchPage() {
             }}
             helperText="Mínimo 2 caracteres para buscar"
           />
-          
+          <FormControl sx={{ minWidth: 180 }}>
+            <InputLabel id="tipo-label" shrink>Tipo</InputLabel>
+            <Select
+              labelId="tipo-label"
+              id="tipo-select"
+              value={tipo}
+              label="Tipo"
+              onChange={e => setTipo(e.target.value)}
+              displayEmpty
+            >
+              <MenuItem value=""><em>Selecciona tipo...</em></MenuItem>
+              <MenuItem value="ligero">Ligero</MenuItem>
+              <MenuItem value="pesado">Pesado</MenuItem>
+            </Select>
+          </FormControl>
           <StyledButton 
             variant="contained" 
             onClick={handleSearch} 

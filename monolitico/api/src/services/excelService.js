@@ -13,18 +13,25 @@ module.exports = {
       const validRecords = [];
       const duplicates = [];
       const errors = [];
+      let dbDuplicates = 0;
+      const rechazados = [];
 
       // Validar y detectar duplicados (optimizado en bloque)
       for (const record of mappedRecords) {
         const validation = validationService.validateRecord(record);
         if (!validation.isValid) {
           errors.push({ record, errors: validation.errors });
+          rechazados.push({ ...record, motivo_rechazo: validation.errors.map(e => e.message).join('; ') });
           continue;
         }
         validRecords.push(record);
       }
 
-      // Buscar duplicados en bloque
+      // Buscar duplicados y guardar según tipo (ligero/pesado)
+      const tipo = options.tipo || 'ligero';
+      const tablaInspeccion = tipo === 'pesado' ? prisma.inspeccionPesado : prisma.inspeccion;
+      const tablaRechazo = tipo === 'pesado' ? prisma.rechazoInspeccionPesado : prisma.rechazoInspeccion;
+
       if (validRecords.length > 0) {
         const orConditions = validRecords.map(r => ({
           placa_vehiculo: r.placa_vehiculo,
@@ -36,7 +43,7 @@ module.exports = {
         let foundDuplicates = [];
         for (let i = 0; i < orConditions.length; i += chunkSize) {
           const chunk = orConditions.slice(i, i + chunkSize);
-          const chunkDuplicates = await prisma.inspeccion.findMany({ where: { OR: chunk }, select: { id: true, placa_vehiculo: true, fecha: true, conductor_nombre: true } });
+          const chunkDuplicates = await tablaInspeccion.findMany({ where: { OR: chunk }, select: { id: true, placa_vehiculo: true, fecha: true, conductor_nombre: true } });
           foundDuplicates = foundDuplicates.concat(chunkDuplicates);
         }
         // Filtrar los duplicados
@@ -45,6 +52,7 @@ module.exports = {
         for (const rec of validRecords) {
           if (isDuplicate(rec)) {
             duplicates.push(rec);
+            rechazados.push({ ...rec, motivo_rechazo: 'Duplicado en base de datos' });
           } else {
             newValidRecords.push(rec);
           }
@@ -53,16 +61,31 @@ module.exports = {
         validRecords.push(...newValidRecords);
       }
 
-      // Procesar por lotes e insertar en BD (batchSize reducido a 100)
+      // Procesar por lotes e insertar en la tabla correspondiente
       const batchSize = options.batchSize || 100;
       const batches = this.splitIntoBatches(validRecords, batchSize);
       let insertados = 0;
       for (const batch of batches) {
         try {
-          const result = await prisma.inspeccion.createMany({ data: batch });
-          insertados += batch.length;
+          const result = await tablaInspeccion.createMany({ data: batch, skipDuplicates: true });
+          insertados += result.count;
+          dbDuplicates += (batch.length - result.count);
         } catch (error) {
-          console.error('Error al insertar batch:', error);
+          if (error.code === 'P2002') {
+            dbDuplicates += batch.length;
+            batch.forEach(rec => rechazados.push({ ...rec, motivo_rechazo: 'Duplicado en base de datos (restricción única)' }));
+          } else {
+            console.error('Error al insertar batch:', error);
+          }
+        }
+      }
+
+      // Guardar todos los rechazados en la tabla correspondiente
+      if (rechazados.length > 0) {
+        const batchSizeRechazo = 100;
+        for (let i = 0; i < rechazados.length; i += batchSizeRechazo) {
+          const batch = rechazados.slice(i, i + batchSizeRechazo);
+          await tablaRechazo.createMany({ data: batch });
         }
       }
 
@@ -78,7 +101,7 @@ module.exports = {
             tamano_archivo: buffer.length,
             total_registros: mappedRecords.length,
             registros_insertados: insertados,
-            registros_duplicados: duplicates.length,
+            registros_duplicados: duplicates.length + dbDuplicates,
             registros_error: errors.length,
             tiempo_procesamiento: 0, // Se puede calcular con Date.now()
             errores_validacion: errors,
@@ -99,10 +122,11 @@ module.exports = {
         success: true,
         totalRecords: mappedRecords.length,
         validRecords: validRecords.length,
-        duplicates: duplicates.length,
+        duplicates: duplicates.length + dbDuplicates,
         errors: errors.length,
         fileHash,
-        insertados
+        insertados,
+        rechazados: rechazados.length
       };
     } catch (error) {
       return { success: false, error: error.message };
@@ -179,13 +203,13 @@ module.exports = {
     return batches;
   },
   calcularRiesgo(row) {
-    // Ejemplo de lógica: si falta sueño, síntomas de fatiga o medicamentos, riesgo ALTO
-    if (row['¿Ha consumido medicamentos o sustancias que afecten su estado de alerta?*'] === 'Sí' ||
-        row['¿Ha dormido al menos 7 horas en las últimas 24 horas?'] !== 'Cumple' ||
-        row['¿Se encuentra libre de síntomas de fatiga (Somnolencia, dolor de cabeza, irritabilidad)?'] !== 'Cumple') {
+    // Usar los valores booleanos normalizados
+    if (row.consumo_medicamentos === true ||
+        row.horas_sueno_suficientes !== true ||
+        row.libre_sintomas_fatiga !== true) {
       return 'ALTO';
     }
-    if (row['¿Se siente en condiciones físicas y mentales para conducir?'] !== 'Cumple') {
+    if (row.condiciones_aptas !== true) {
       return 'MEDIO';
     }
     return 'BAJO';
@@ -202,12 +226,12 @@ module.exports = {
     return puntaje;
   },
   calcularPuntajeFatiga(row) {
-    // Ejemplo: sumar 1 por cada respuesta positiva en fatiga
+    // Sumar 1 por cada respuesta positiva en fatiga usando booleanos
     let puntaje = 0;
-    if (row['¿Ha dormido al menos 7 horas en las últimas 24 horas?'] === 'Cumple') puntaje++;
-    if (row['¿Se encuentra libre de síntomas de fatiga (Somnolencia, dolor de cabeza, irritabilidad)?'] === 'Cumple') puntaje++;
-    if (row['¿Se siente en condiciones físicas y mentales para conducir?'] === 'Cumple') puntaje++;
-    if (row['¿Ha consumido medicamentos o sustancias que afecten su estado de alerta?*'] !== 'Sí') puntaje++;
+    if (row.horas_sueno_suficientes === true) puntaje++;
+    if (row.libre_sintomas_fatiga === true) puntaje++;
+    if (row.condiciones_aptas === true) puntaje++;
+    if (row.consumo_medicamentos !== true) puntaje++;
     return puntaje;
   },
   tieneAlertasCriticas(row) {

@@ -10,8 +10,23 @@ module.exports = {
         return responseUtils.errorResponse(res, 'NO_FILE', 'No se envió ningún archivo');
       }
       const { buffer, originalname } = req.file;
-        console.log(`Archivo recibido: ${originalname}, tamaño: ${buffer.length} bytes`);
-      const result = await excelService.processExcelFile(buffer, originalname);
+      let tipo = req.body.tipo;
+      // Validación automática por nombre de archivo
+      if (!tipo) {
+        if (/pesad/i.test(originalname)) {
+          tipo = 'pesado';
+        } else if (/liger/i.test(originalname)) {
+          tipo = 'ligero';
+        } else if (/veh[ií]culos? pesad/i.test(originalname)) {
+          tipo = 'pesado';
+        } else if (/veh[ií]culos? liger/i.test(originalname)) {
+          tipo = 'ligero';
+        } else {
+          tipo = 'ligero'; // Default
+        }
+      }
+      console.log(`Archivo recibido: ${originalname}, tamaño: ${buffer.length} bytes, tipo: ${tipo}`);
+      const result = await excelService.processExcelFile(buffer, originalname, { tipo });
         console.log('Resultado del procesamiento:', result);
       if (result.success) {
           console.log('--- FIN DE CARGA EXITOSA ---');

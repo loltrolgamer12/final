@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import {
   Box,
   Typography,
@@ -80,6 +81,7 @@ export default function UploadPage() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [alreadyProcessed, setAlreadyProcessed] = useState(false);
+  const [tipo, setTipo] = useState('');
 
   // Manejador de cambio de archivo
   const handleFileChange = e => {
@@ -89,21 +91,30 @@ export default function UploadPage() {
       setResult(null);
       setError(null);
       setAlreadyProcessed(false);
+      // Detección automática por nombre de archivo
+      if (/pesad/i.test(selectedFile.name) || /veh[ií]culos? pesad/i.test(selectedFile.name)) {
+        setTipo('pesado');
+      } else if (/liger/i.test(selectedFile.name) || /veh[ií]culos? liger/i.test(selectedFile.name)) {
+        setTipo('ligero');
+      } else {
+        setTipo('');
+      }
     }
   };
 
   // Manejador de carga de archivo
   const handleUpload = async () => {
-    if (!file) return;
-    
+    if (!file || !tipo) {
+      setError('Debes seleccionar el tipo de camión antes de subir el archivo.');
+      return;
+    }
     setLoading(true);
     setProgress(0);
     setResult(null);
     setError(null);
-    
     const formData = new FormData();
     formData.append('file', file);
-    
+    formData.append('tipo', tipo);
     try {
       const res = await axios.post('/api/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -111,13 +122,11 @@ export default function UploadPage() {
           setProgress(Math.round((e.loaded * 100) / e.total));
         }
       });
-      
       setResult(res.data.data);
       setAlreadyProcessed(false);
     } catch (err) {
       const msg = err.response?.data?.error?.message || 'Error al cargar el archivo';
       setError(msg);
-      
       if (msg.includes('ya fue procesado')) {
         setAlreadyProcessed(true);
       } else {
@@ -146,6 +155,21 @@ export default function UploadPage() {
                 Cargar archivo Excel de inspecciones
               </Typography>
             </Box>
+            <FormControl fullWidth sx={{ mb: 2 }} required error={!tipo}>
+              <InputLabel id="tipo-label" shrink>Tipo de camión *</InputLabel>
+              <Select
+                labelId="tipo-label"
+                id="tipo-select"
+                value={tipo}
+                label="Tipo de camión *"
+                onChange={e => setTipo(e.target.value)}
+                displayEmpty
+              >
+                <MenuItem value=""><em>Selecciona tipo...</em></MenuItem>
+                <MenuItem value="ligero">Ligero</MenuItem>
+                <MenuItem value="pesado">Pesado</MenuItem>
+              </Select>
+            </FormControl>
             
             {alreadyProcessed && (
               <Alert severity="warning" sx={{ mt: 2, mb: 2 }}>
@@ -308,8 +332,23 @@ export default function UploadPage() {
                 sx={{ mt: 3 }}
                 icon={<ErrorIcon />}
               >
-                <Typography variant="subtitle2">Error al procesar el archivo</Typography>
-                <Typography variant="body2">{error}</Typography>
+                <Typography variant="subtitle2">No se pudo cargar el archivo</Typography>
+                <Typography variant="body2" color="error">
+                  {error}
+                </Typography>
+                {error.includes('tipo') && (
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="body2" color="error">
+                      <strong>Motivo:</strong> El tipo detectado por el nombre del archivo no coincide con el tipo seleccionado.
+                    </Typography>
+                    <Typography variant="caption" color="error">
+                      Ejemplo: Si el archivo se llama "VEHÍCULOS PESADOS.xlsx" y seleccionaste "ligero", el sistema lo rechaza para evitar errores en la base de datos.
+                    </Typography>
+                    <Typography variant="caption" color="error">
+                      Solución: Verifica que el tipo seleccionado corresponda al archivo que estás subiendo.
+                    </Typography>
+                  </Box>
+                )}
               </Alert>
             )}
           </StyledPaper>

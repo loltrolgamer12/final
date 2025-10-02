@@ -172,17 +172,23 @@ export default function Layout({ children }) {
 
             {/* Logo de la empresa */}
             {!logoError && (
-              <Avatar 
-                src={logoUrl} 
-                alt="Logo Empresa"
-                onError={handleLogoError}
-                sx={{ 
-                  width: 40, 
-                  height: 40,
-                  border: '1px solid #f0f0f0',
-                  backgroundColor: 'white'
-                }}
-              />
+              <Box sx={{ display: 'flex', alignItems: 'center', height: 64 }}>
+                <img 
+                  src={logoUrl}
+                  alt="Logo Empresa"
+                  onError={handleLogoError}
+                  style={{
+                    height: '64px',
+                    width: 'auto',
+                    maxWidth: '180px',
+                    objectFit: 'contain',
+                    border: '1px solid #f0f0f0',
+                    background: 'white',
+                    borderRadius: '8px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.07)'
+                  }}
+                />
+              </Box>
             )}
           </Toolbar>
         </StyledAppBar>
