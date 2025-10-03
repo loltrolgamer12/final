@@ -10,6 +10,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import WarningIcon from '@mui/icons-material/Warning';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import api from '../services/api';
 
 
@@ -229,16 +230,30 @@ export default function ConductoresPage() {
           <TextField size="small" label="Nombre conductor" name="nombre" value={filtros.nombre} onChange={handleFiltroChange} sx={{ minWidth: 180 }} />
           <TextField size="small" label="Placa" name="placa" value={filtros.placa} onChange={handleFiltroChange} sx={{ minWidth: 120 }} />
           <FormControl size="small" sx={{ minWidth: 130 }}>
-            <InputLabel>Cumplimiento</InputLabel>
-            <Select label="Cumplimiento" name="cumplimiento" value={filtros.cumplimiento} onChange={handleFiltroChange} displayEmpty>
+            <InputLabel id="cumplimiento-label" shrink>Cumplimiento</InputLabel>
+            <Select 
+              labelId="cumplimiento-label" 
+              label="Cumplimiento" 
+              name="cumplimiento" 
+              value={filtros.cumplimiento} 
+              onChange={handleFiltroChange}
+              displayEmpty
+            >
               <MenuItem value=""><em>Todos</em></MenuItem>
               <MenuItem value="true">Cumple</MenuItem>
               <MenuItem value="false">No cumple</MenuItem>
             </Select>
           </FormControl>
           <FormControl size="small" sx={{ minWidth: 110 }}>
-            <InputLabel>Fatiga</InputLabel>
-            <Select label="Fatiga" name="fatiga" value={filtros.fatiga} onChange={handleFiltroChange} displayEmpty>
+            <InputLabel id="fatiga-label" shrink>Fatiga</InputLabel>
+            <Select 
+              labelId="fatiga-label" 
+              label="Fatiga" 
+              name="fatiga" 
+              value={filtros.fatiga} 
+              onChange={handleFiltroChange}
+              displayEmpty
+            >
               <MenuItem value=""><em>Todos</em></MenuItem>
               <MenuItem value="true">Sí</MenuItem>
               <MenuItem value="false">No</MenuItem>
@@ -273,6 +288,9 @@ export default function ConductoresPage() {
                     </TableSortLabel>
                   </TableCell>
                   <TableCell align="center">
+                    <Tooltip title="Fecha de la inspección" arrow>Fecha</Tooltip>
+                  </TableCell>
+                  <TableCell align="center">
                     <TableSortLabel active={orderBy === 'alertas'} direction={orderBy === 'alertas' ? order : 'asc'} onClick={() => handleRequestSort('alertas')}>
                       <Tooltip title="Cantidad de alertas" arrow>Alertas</Tooltip>
                     </TableSortLabel>
@@ -293,6 +311,7 @@ export default function ConductoresPage() {
                   <TableRow key={idx} hover>
                     <TableCell>{c.nombre}</TableCell>
                     <TableCell>{c.placa}</TableCell>
+                    <TableCell align="center">{c.fecha || '-'}</TableCell>
                     <TableCell align="center">{c.alertas}</TableCell>
                     <TableCell align="center">{c.fatiga ? <Chip label="Fatiga" color="error" size="small" icon={<WarningIcon />} /> : ''}</TableCell>
                     <TableCell align="center">{c.cumplimiento ? <Chip label="Cumple" color="info" size="small" icon={<CheckCircleIcon />} /> : ''}</TableCell>
@@ -334,12 +353,6 @@ export default function ConductoresPage() {
             <>
               <Typography variant="subtitle1" sx={{ mb: 1 }}>{detalle.nombre} - {detalle.placa}</Typography>
               <List dense>
-                {detalle.fatiga && (
-                  <ListItem>
-                    <ListItemIcon><WarningIcon color="error" /></ListItemIcon>
-                    <ListItemText primary={`Motivo de fatiga: ${detalle.motivoFatiga || 'No especificado'}`} />
-                  </ListItem>
-                )}
                 <ListItem>
                   <ListItemIcon><PersonIcon /></ListItemIcon>
                   <ListItemText primary={`Nombre: ${detalle.nombre}`} />
@@ -348,6 +361,18 @@ export default function ConductoresPage() {
                   <ListItemIcon><DirectionsCarIcon /></ListItemIcon>
                   <ListItemText primary={`Placa: ${detalle.placa}`} />
                 </ListItem>
+                {detalle.fecha && (
+                  <ListItem>
+                    <ListItemIcon><CalendarTodayIcon /></ListItemIcon>
+                    <ListItemText primary={`Fecha de Inspección: ${detalle.fecha}`} />
+                  </ListItem>
+                )}
+                {detalle.motivoFatiga && (
+                  <ListItem>
+                    <ListItemIcon><WarningIcon color={detalle.fatiga ? 'error' : 'warning'} /></ListItemIcon>
+                    <ListItemText primary={`Motivo: ${detalle.motivoFatiga}`} />
+                  </ListItem>
+                )}
                 <ListItem>
                   <ListItemIcon><WarningIcon color={detalle.fatiga ? 'error' : 'disabled'} /></ListItemIcon>
                   <ListItemText primary={`Fatiga: ${detalle.fatiga ? 'Sí' : 'No'}`} />

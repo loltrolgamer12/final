@@ -82,18 +82,22 @@ module.exports = {
         }));
 
       // Vehículos advertencia (motivo detallado)
+      // TODOS los campos del vehículo que pueden tener fallas
       const vehiculosAdvertencia = inspecciones
         .filter(i => {
-          // Considerar advertencia si hay algún campo crítico en falla o hay observaciones
-          const camposCriticos = [
-            'frenos', 'frenos_emergencia', 'cinturones', 'vidrio_frontal', 'espejos',
-            'direccionales', 'limpiaparabrisas', 'altas_bajas', 'llantas', 'testigo'
+          // Lista COMPLETA de campos booleanos de inspección del vehículo ligero
+          const camposVehiculo = [
+            'altas_bajas', 'direccionales', 'parqueo', 'freno', 'reversa',
+            'espejos', 'vidrio_frontal', 'frenos', 'frenos_emergencia',
+            'cinturones', 'puertas', 'vidrios', 'limpiaparabrisas'
           ];
-          return camposCriticos.some(c => i[c] === false) || (i.observaciones && i.observaciones.length > 0);
+          // Incluir si AL MENOS UN campo está en false (tiene falla)
+          return camposVehiculo.some(c => i[c] === false);
         })
         .map(i => ({
           placa: i.placa_vehiculo,
           fecha: new Date(i.fecha).toLocaleDateString(),
+          conductor: i.conductor_nombre,
           motivo: getMotivoCriticoDetallado(i)
         }));
 

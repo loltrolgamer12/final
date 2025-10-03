@@ -4,11 +4,14 @@ const fechaRegex = /^(\d{4}-\d{2}-\d{2}|\d{4}\/\d{2}\/\d{2}|\d{2}\/\d{2}\/\d{4})
 function normalizeBoolean(value) {
   if (value === true || value === 1) return true;
   if (value === false || value === 0) return false;
+  // Para campos obligatorios: null/undefined se trata como false (valor por defecto)
+  if (value === null || value === undefined) return false;
   if (typeof value !== 'string') return false;
   const v = value.trim().toUpperCase();
   if (["CUMPLE","SI","SÍ","TRUE","OK","X","1","YES","VERDADERO","Y"].includes(v)) return true;
-  if (["NO CUMPLE","NO","FALSE","NA","NAN","0","FALSO","N",""].includes(v)) return false;
-  return false;
+  if (["NO CUMPLE","NO","FALSE","NA","NAN","0","FALSO","N"].includes(v)) return false;
+  if (v === "") return false; // Campo vacío = valor por defecto
+  return false; // Valor desconocido = valor por defecto
 }
 
 function normalizeKilometraje(value) {
@@ -35,7 +38,7 @@ function normalizeFecha(value) {
 }
 
 module.exports = {
-  validateRecord(record) {
+  validateRecord(record, tipo = 'ligero') {
     const errors = [];
     const warnings = [];
       // Log de entrada de registro
@@ -44,9 +47,11 @@ module.exports = {
     if (!record.placa_vehiculo || !placaRegex.test(record.placa_vehiculo.trim())) {
       warnings.push({ field: 'placa_vehiculo', message: `Placa dudosa: ${record.placa_vehiculo}` });
     }
-    // Validar conductor
-    if (!record.conductor_nombre || record.conductor_nombre.trim().length < 3) {
-      errors.push({ field: 'conductor_nombre', message: 'Nombre del conductor requerido (mínimo 3 caracteres)' });
+    // Validar conductor/inspector según tipo
+    const nombreField = tipo === 'pesado' ? 'nombre_inspector' : 'conductor_nombre';
+    const nombreLabel = tipo === 'pesado' ? 'inspector' : 'conductor';
+    if (!record[nombreField] || record[nombreField].trim().length < 3) {
+      errors.push({ field: nombreField, message: `Nombre del ${nombreLabel} requerido (mínimo 3 caracteres)` });
     }
     // Validar fecha
     const fechaValida = normalizeFecha(record.fecha);

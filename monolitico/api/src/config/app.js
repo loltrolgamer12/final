@@ -4,15 +4,15 @@ const cors = require('cors');
 const morgan = require('morgan');
 
 
-const Sentry = require('@sentry/node');
-Sentry.init({
-	dsn: process.env.SENTRY_DSN || '',
-	tracesSampleRate: 1.0,
-	environment: process.env.NODE_ENV || 'development',
-});
+// Sentry temporalmente deshabilitado (requiere actualización a v8+)
+// const Sentry = require('@sentry/node');
+// Sentry.init({
+// 	dsn: process.env.SENTRY_DSN || '',
+// 	tracesSampleRate: 1.0,
+// 	environment: process.env.NODE_ENV || 'development',
+// });
+
 const app = express();
-// Integración Sentry para monitoreo de errores y performance
-app.use(Sentry.requestHandler());
 
 const uploadRoutes = require('../routes/upload');
 const dashboardRoutes = require('../routes/dashboard');
@@ -52,8 +52,8 @@ app.get(/^((?!\/api).)*$/, (req, res) => {
 });
 
 
-// Manejo de errores global y Sentry
-app.use(Sentry.errorHandler());
+// Manejo de errores global
+// app.use(Sentry.errorHandler()); // Deshabilitado temporalmente
 app.use(errorHandler);
 
 module.exports = app;

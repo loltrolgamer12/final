@@ -5,7 +5,6 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout/Layout';
 import DashboardPage from './pages/Dashboard';
 import UploadPage from './pages/Upload';
-import SearchPage from './pages/Search';
 import AlertsPage from './pages/Alerts';
 import ReportesPage from './pages/Reportes';
 import ConductoresPage from './pages/Conductores';
@@ -148,7 +147,6 @@ function App() {
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/upload" element={<UploadPage />} />
-            <Route path="/search" element={<SearchPage />} />
             <Route path="/alerts" element={<AlertsPage />} />
             <Route path="/reportes" element={<ReportesPage />} />
             <Route path="/conductores" element={<ConductoresPage />} />

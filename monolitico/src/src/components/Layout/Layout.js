@@ -24,7 +24,6 @@ import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import WarningIcon from '@mui/icons-material/Warning';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import AssessmentIcon from '@mui/icons-material/Assessment';
-import SearchIcon from '@mui/icons-material/Search';
 import ElectricBoltIcon from '@mui/icons-material/ElectricBolt';
 
 // Ruta relativa al logo
@@ -93,7 +92,6 @@ const menuItems = [
   { text: 'Vehículos', icon: <DirectionsCarIcon />, path: '/vehiculos' },
   { text: 'Carga Excel', icon: <FileUploadIcon />, path: '/upload' },
   { text: 'Reportes', icon: <AssessmentIcon />, path: '/reportes' },
-  { text: 'Búsqueda', icon: <SearchIcon />, path: '/search' },
 ];
 
 export default function Layout({ children }) {

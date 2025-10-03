@@ -1,22 +1,34 @@
 
 function getMotivoCriticoDetallado(inspeccion) {
   if (!inspeccion) return '';
+  
+  // TODOS los campos del vehículo ligero
   const campos = [
+    { campo: 'altas_bajas', nombre: 'Luces altas/bajas' },
+    { campo: 'direccionales', nombre: 'Direccionales' },
+    { campo: 'parqueo', nombre: 'Luces de parqueo' },
+    { campo: 'freno', nombre: 'Luces de freno' },
+    { campo: 'reversa', nombre: 'Luces de reversa' },
+    { campo: 'espejos', nombre: 'Espejos' },
+    { campo: 'vidrio_frontal', nombre: 'Vidrio frontal' },
     { campo: 'frenos', nombre: 'Frenos' },
     { campo: 'frenos_emergencia', nombre: 'Freno de emergencia' },
     { campo: 'cinturones', nombre: 'Cinturones' },
-    { campo: 'vidrio_frontal', nombre: 'Vidrio frontal' },
-    { campo: 'espejos', nombre: 'Espejos' },
-    { campo: 'direccionales', nombre: 'Direccionales' },
-    { campo: 'limpiaparabrisas', nombre: 'Limpiaparabrisas' },
-    { campo: 'altas_bajas', nombre: 'Luces altas/bajas' },
-    { campo: 'llantas', nombre: 'Llantas' },
-    { campo: 'testigo', nombre: 'Testigo encendido' }
+    { campo: 'puertas', nombre: 'Puertas' },
+    { campo: 'vidrios', nombre: 'Vidrios' },
+    { campo: 'limpiaparabrisas', nombre: 'Limpiaparabrisas' }
   ];
-  const detalles = campos.map(c => `${c.nombre}: ${inspeccion[c.campo] === false ? 'Falla' : 'OK'}`);
-  let extra = [];
-  if (inspeccion.observaciones) extra.push('Observaciones: ' + inspeccion.observaciones);
-  return [...detalles, ...extra].join(' | ');
+  
+  // Solo mostrar los que tienen falla (false)
+  const fallas = campos
+    .filter(c => inspeccion[c.campo] === false)
+    .map(c => c.nombre);
+  
+  if (fallas.length === 0) {
+    return 'Sin fallas mecánicas detectadas';
+  }
+  
+  return 'Fallas: ' + fallas.join(', ');
 }
 
 module.exports = {

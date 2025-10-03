@@ -10,6 +10,7 @@ import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import WarningIcon from '@mui/icons-material/Warning';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PersonIcon from '@mui/icons-material/Person';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import api from '../services/api';
 
 
@@ -228,16 +229,30 @@ export default function VehiculosPage() {
           <TextField size="small" label="Placa" name="placa" value={filtros.placa} onChange={handleFiltroChange} sx={{ minWidth: 120 }} />
           <TextField size="small" label="Conductor" name="conductor" value={filtros.conductor} onChange={handleFiltroChange} sx={{ minWidth: 180 }} />
           <FormControl size="small" sx={{ minWidth: 130 }}>
-            <InputLabel>Cumplimiento</InputLabel>
-            <Select label="Cumplimiento" name="cumplimiento" value={filtros.cumplimiento} onChange={handleFiltroChange} displayEmpty>
+            <InputLabel id="cumplimiento-label" shrink>Cumplimiento</InputLabel>
+            <Select 
+              labelId="cumplimiento-label" 
+              label="Cumplimiento" 
+              name="cumplimiento" 
+              value={filtros.cumplimiento} 
+              onChange={handleFiltroChange}
+              displayEmpty
+            >
               <MenuItem value=""><em>Todos</em></MenuItem>
               <MenuItem value="true">Cumple</MenuItem>
               <MenuItem value="false">No cumple</MenuItem>
             </Select>
           </FormControl>
           <FormControl size="small" sx={{ minWidth: 110 }}>
-            <InputLabel>Crítico</InputLabel>
-            <Select label="Crítico" name="critico" value={filtros.critico} onChange={handleFiltroChange} displayEmpty>
+            <InputLabel id="critico-label" shrink>Crítico</InputLabel>
+            <Select 
+              labelId="critico-label" 
+              label="Crítico" 
+              name="critico" 
+              value={filtros.critico} 
+              onChange={handleFiltroChange}
+              displayEmpty
+            >
               <MenuItem value=""><em>Todos</em></MenuItem>
               <MenuItem value="true">Sí</MenuItem>
               <MenuItem value="false">No</MenuItem>
@@ -272,12 +287,15 @@ export default function VehiculosPage() {
                     </TableSortLabel>
                   </TableCell>
                   <TableCell align="center">
+                    <Tooltip title="Fecha de la inspección" arrow>Fecha</Tooltip>
+                  </TableCell>
+                  <TableCell align="center">
                     <TableSortLabel active={orderBy === 'alertas'} direction={orderBy === 'alertas' ? order : 'asc'} onClick={() => handleRequestSort('alertas')}>
-                      <Tooltip title="Cantidad de alertas" arrow>Alertas</Tooltip>
+                      <Tooltip title="Inspecciones con fallas" arrow>Total</Tooltip>
                     </TableSortLabel>
                   </TableCell>
                   <TableCell align="center">
-                    <Tooltip title="¿Crítico detectado?" arrow>Crítico</Tooltip>
+                    <Tooltip title="Inspecciones con fallas críticas" arrow>Críticas</Tooltip>
                   </TableCell>
                   <TableCell align="center">
                     <Tooltip title="¿Cumple con requisitos?" arrow>Cumplimiento</Tooltip>
@@ -292,8 +310,17 @@ export default function VehiculosPage() {
                   <TableRow key={idx} hover>
                     <TableCell>{v.placa}</TableCell>
                     <TableCell>{v.conductor}</TableCell>
-                    <TableCell align="center">{v.alertas}</TableCell>
-                    <TableCell align="center">{v.critico ? <Chip label="Crítico" color="error" size="small" icon={<WarningIcon />} /> : ''}</TableCell>
+                    <TableCell align="center">{v.fecha || '-'}</TableCell>
+                    <TableCell align="center">
+                      <Chip label={v.alertas} size="small" color="warning" />
+                    </TableCell>
+                    <TableCell align="center">
+                      {v.alertasCriticas > 0 ? (
+                        <Chip label={v.alertasCriticas} size="small" color="error" icon={<WarningIcon />} />
+                      ) : (
+                        <Chip label="0" size="small" color="success" />
+                      )}
+                    </TableCell>
                     <TableCell align="center">{v.cumplimiento ? <Chip label="Cumple" color="info" size="small" icon={<CheckCircleIcon />} /> : ''}</TableCell>
                     <TableCell align="center">
                       <Button size="small" variant="outlined" onClick={() => handleOpenDetalle(v)}>Ver</Button>
@@ -333,12 +360,6 @@ export default function VehiculosPage() {
             <>
               <Typography variant="subtitle1" sx={{ mb: 1 }}>{detalle.placa} - {detalle.conductor}</Typography>
               <List dense>
-                {detalle.critico && (
-                  <ListItem>
-                    <ListItemIcon><WarningIcon color="error" /></ListItemIcon>
-                    <ListItemText primary={`Motivo crítico: ${detalle.motivoCritico || 'No especificado'}`} />
-                  </ListItem>
-                )}
                 <ListItem>
                   <ListItemIcon><DirectionsCarIcon /></ListItemIcon>
                   <ListItemText primary={`Placa: ${detalle.placa}`} />
@@ -347,10 +368,25 @@ export default function VehiculosPage() {
                   <ListItemIcon><PersonIcon /></ListItemIcon>
                   <ListItemText primary={`Conductor: ${detalle.conductor}`} />
                 </ListItem>
+                {detalle.fecha && (
+                  <ListItem>
+                    <ListItemIcon><CalendarTodayIcon /></ListItemIcon>
+                    <ListItemText primary={`Última Inspección: ${detalle.fecha}`} />
+                  </ListItem>
+                )}
                 <ListItem>
-                  <ListItemIcon><WarningIcon color={detalle.critico ? 'error' : 'disabled'} /></ListItemIcon>
-                  <ListItemText primary={`Crítico: ${detalle.critico ? 'Sí' : 'No'}`} />
+                  <ListItemIcon><WarningIcon color="warning" /></ListItemIcon>
+                  <ListItemText 
+                    primary={`Inspecciones con fallas: ${detalle.alertas} total`}
+                    secondary={detalle.alertasCriticas > 0 ? `${detalle.alertasCriticas} son críticas` : 'Ninguna crítica'}
+                  />
                 </ListItem>
+                {detalle.motivoCritico && (
+                  <ListItem>
+                    <ListItemIcon><WarningIcon color={detalle.alertasCriticas > 0 ? 'error' : 'warning'} /></ListItemIcon>
+                    <ListItemText primary={detalle.motivoCritico} />
+                  </ListItem>
+                )}
                 <ListItem>
                   <ListItemIcon><CheckCircleIcon color={detalle.cumplimiento ? 'info' : 'disabled'} /></ListItemIcon>
                   <ListItemText primary={`Cumplimiento: ${detalle.cumplimiento ? 'Sí' : 'No'}`} />

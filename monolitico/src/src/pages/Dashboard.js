@@ -37,6 +37,15 @@ import SpeedIcon from '@mui/icons-material/Speed';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import api from '../services/api';
 import KpiCharts from '../components/common/KpiCharts';
+import { 
+  ResponsiveContainer, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip 
+} from 'recharts';
 
 // Eliminado: StatusCard estilizado local. Usar componente importado.
 
