@@ -122,8 +122,8 @@ router.get('/conductores', async (req, res) => {
 			}
 		}
 		
-		// Convertir a array y FILTRAR solo los que tienen problemas
-		let data = Object.values(agrupadas).filter(c => c.alertas > 0);
+		// Convertir a array (sin filtrar por alertas por defecto)
+		let data = Object.values(agrupadas);
 		
 		// Filtrar por fatiga (true = CON fatiga, false = SIN fatiga)
 		if (fatiga === 'true') {
