@@ -38,13 +38,11 @@ function normalizeFecha(value) {
 }
 
 function obtenerCamposInspeccion(tipo) {
-  // Campos comunes de inspección que deben estar completos
+  // Campos de inspección QUE REALMENTE EXISTEN en el mapeo
   const camposLigero = [
-    'luces_delanteras', 'luces_traseras', 'luces_freno', 'luces_reversa', 'luces_direccionales',
-    'cinturon_seguridad', 'pito', 'espejos', 'vidrios_panoramico', 'limpiaparabrisas',
-    'nivel_aceite', 'nivel_refrigerante', 'nivel_liquido_frenos', 'estado_frenos',
-    'presion_llantas', 'labrado_llantas', 'llanta_repuesto', 'herramientas',
-    'botiquin', 'extintor', 'chaleco', 'tacos', 'documentos_vehiculo', 'limpieza_vehiculo'
+    'altas_bajas', 'direccionales', 'parqueo', 'freno', 'reversa',
+    'espejos', 'vidrio_frontal', 'frenos', 'frenos_emergencia',
+    'cinturones', 'puertas', 'vidrios', 'limpiaparabrisas'
   ];
   
   const camposPesado = [
@@ -107,10 +105,12 @@ module.exports = {
         }
       });
       
-      // Verificar TODOS los demás campos de inspección (dependiendo del tipo)
+      // Verificar que los campos de inspección que SÍ existen en el record no estén vacíos
+      // Solo validamos los campos que realmente están en el schema/mapeo
       const camposInspeccion = obtenerCamposInspeccion(tipo);
       camposInspeccion.forEach(campo => {
-        if (record[campo] === null || record[campo] === undefined) {
+        // Solo validar si el campo existe en el record (está en el mapeo)
+        if (campo in record && (record[campo] === null || record[campo] === undefined)) {
           errors.push({ field: campo, message: `${campo} requerido (no puede estar vacío)` });
         }
       });
