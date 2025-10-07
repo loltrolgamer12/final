@@ -82,7 +82,7 @@ router.get('/conductores', async (req, res) => {
 			if (!agrupadas[key]) {
 				agrupadas[key] = {
 					nombre: i.conductor_nombre,
-					placa: i.placa_vehiculo,
+					placa: i.placa_vehiculo || '',
 					alertas: 0,
 					fatiga: false,
 					cumplimiento: true,
@@ -92,11 +92,13 @@ router.get('/conductores', async (req, res) => {
 				};
 			}
 			
-			// Actualizar placa con la inspección más reciente (solo si tiene placa válida)
-			if (i.placa_vehiculo && i.placa_vehiculo.trim() !== '' && 
-			    new Date(i.fecha) > new Date(agrupadas[key].ultimaFecha)) {
-				agrupadas[key].placa = i.placa_vehiculo;
+			// Actualizar placa y fecha con la inspección más reciente (siempre)
+			if (new Date(i.fecha) > new Date(agrupadas[key].ultimaFecha)) {
 				agrupadas[key].ultimaFecha = i.fecha;
+				// Solo actualizar placa si la nueva inspección tiene una placa válida
+				if (i.placa_vehiculo && i.placa_vehiculo.trim() !== '') {
+					agrupadas[key].placa = i.placa_vehiculo;
+				}
 			}
 			
 			// SOLO contar si hay problemas del CONDUCTOR
@@ -139,12 +141,13 @@ router.get('/conductores', async (req, res) => {
 			data = data.filter(c => c.cumplimiento === false);
 		}
 		
-		// Limpiar campo temporal y renombrar fechaFatiga a fecha
+		// Limpiar campo temporal y usar ultimaFecha como fecha principal
 		data = data.map(c => {
 			const { fechaFatiga, ultimaFecha, ...rest } = c;
 			return {
 				...rest,
-				fecha: fechaFatiga ? new Date(fechaFatiga).toLocaleDateString('es-ES') : null
+				fecha: ultimaFecha ? new Date(ultimaFecha).toLocaleDateString('es-ES') : null,
+				fechaProblema: fechaFatiga ? new Date(fechaFatiga).toLocaleDateString('es-ES') : null
 			};
 		});
 		
