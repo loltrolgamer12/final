@@ -43,35 +43,34 @@ module.exports = {
     const warnings = [];
       // Log de entrada de registro
       console.log('Validando registro:', JSON.stringify(record));
-    // Validar placa
-    if (!record.placa_vehiculo || !placaRegex.test(record.placa_vehiculo.trim())) {
-      warnings.push({ field: 'placa_vehiculo', message: `Placa dudosa: ${record.placa_vehiculo}` });
+    // Solo advertencias para placa (sin validar formato)
+    if (!record.placa_vehiculo || record.placa_vehiculo.trim() === '') {
+      console.log('Advertencia: Registro sin placa');
     }
-    // Validar conductor/inspector según tipo
+    // Solo advertencias para conductor/inspector (sin validar longitud)
     const nombreField = tipo === 'pesado' ? 'nombre_inspector' : 'conductor_nombre';
-    const nombreLabel = tipo === 'pesado' ? 'inspector' : 'conductor';
-    if (!record[nombreField] || record[nombreField].trim().length < 3) {
-      errors.push({ field: nombreField, message: `Nombre del ${nombreLabel} requerido (mínimo 3 caracteres)` });
+    if (!record[nombreField] || record[nombreField].trim() === '') {
+      console.log('Advertencia: Registro sin nombre');
     }
-    // Validar fecha
+    // Validar fecha (mantener esta validación básica)
     const fechaValida = normalizeFecha(record.fecha);
     if (!fechaValida) {
       errors.push({ field: 'fecha', message: 'Fecha de inspección requerida o formato inválido' });
     }
-    // Validar campos críticos de fatiga
+    // Validar campos críticos de fatiga (solo logs, sin warnings)
     ['consumo_medicamentos','horas_sueno_suficientes','libre_sintomas_fatiga','condiciones_aptas'].forEach(campo => {
       if (typeof record[campo] !== 'boolean') {
-        warnings.push({ field: campo, message: `Campo crítico dudoso o vacío: ${campo}` });
+        console.log(`Advertencia: Campo ${campo} no es booleano`);
       }
     });
-    // Validar kilometraje
+    // Validar kilometraje (solo log, sin warning)
     const km = normalizeKilometraje(record.kilometraje);
     if (km === 0) {
-      warnings.push({ field: 'kilometraje', message: 'Kilometraje vacío o inválido' });
+      console.log('Advertencia: Kilometraje vacío o inválido');
     }
-    // Validar turno
+    // Validar turno (solo log, sin warning)
     if (!record.turno || !['DIURNA','NOCTURNA'].includes(record.turno.toUpperCase())) {
-      warnings.push({ field: 'turno', message: 'Turno dudoso o vacío' });
+      console.log('Advertencia: Turno dudoso o vacío');
     }
     // Validar campos opcionales y otros
     // ...agregar validaciones adicionales según reglas de negocio
