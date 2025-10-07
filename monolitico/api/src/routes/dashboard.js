@@ -88,17 +88,20 @@ router.get('/conductores', async (req, res) => {
 					cumplimiento: true,
 					motivoFatiga: '',
 					fechaFatiga: null,
-					ultimaFecha: i.fecha
+					ultimaFecha: i.fecha,
+					placas: [] // Array para rastrear todas las placas
 				};
 			}
 			
-			// Actualizar placa y fecha con la inspección más reciente (siempre)
+			// Actualizar fecha con la inspección más reciente
 			if (new Date(i.fecha) > new Date(agrupadas[key].ultimaFecha)) {
 				agrupadas[key].ultimaFecha = i.fecha;
-				// Solo actualizar placa si la nueva inspección tiene una placa válida
-				if (i.placa_vehiculo && i.placa_vehiculo.trim() !== '') {
-					agrupadas[key].placa = i.placa_vehiculo;
-				}
+			}
+			
+			// Recolectar todas las placas válidas (sin duplicados)
+			if (i.placa_vehiculo && i.placa_vehiculo.trim() !== '' && 
+			    !agrupadas[key].placas.includes(i.placa_vehiculo)) {
+				agrupadas[key].placas.push(i.placa_vehiculo);
 			}
 			
 			// SOLO contar si hay problemas del CONDUCTOR
@@ -143,9 +146,13 @@ router.get('/conductores', async (req, res) => {
 		
 		// Limpiar campo temporal y usar ultimaFecha como fecha principal
 		data = data.map(c => {
-			const { fechaFatiga, ultimaFecha, ...rest } = c;
+			const { fechaFatiga, ultimaFecha, placas, ...rest } = c;
+			// Usar la última placa del array (la más reciente agregada) o todas si hay múltiples
+			const placaFinal = placas.length > 0 ? placas[placas.length - 1] : '';
 			return {
 				...rest,
+				placa: placaFinal,
+				todasPlacas: placas.join(', '), // Campo adicional con todas las placas
 				fecha: ultimaFecha ? new Date(ultimaFecha).toLocaleDateString('es-ES') : null,
 				fechaProblema: fechaFatiga ? new Date(fechaFatiga).toLocaleDateString('es-ES') : null
 			};
