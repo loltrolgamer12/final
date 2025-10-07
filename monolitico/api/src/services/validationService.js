@@ -37,47 +37,115 @@ function normalizeFecha(value) {
   return null;
 }
 
+function obtenerCamposInspeccion(tipo) {
+  // Campos comunes de inspección que deben estar completos
+  const camposLigero = [
+    'luces_delanteras', 'luces_traseras', 'luces_freno', 'luces_reversa', 'luces_direccionales',
+    'cinturon_seguridad', 'pito', 'espejos', 'vidrios_panoramico', 'limpiaparabrisas',
+    'nivel_aceite', 'nivel_refrigerante', 'nivel_liquido_frenos', 'estado_frenos',
+    'presion_llantas', 'labrado_llantas', 'llanta_repuesto', 'herramientas',
+    'botiquin', 'extintor', 'chaleco', 'tacos', 'documentos_vehiculo', 'limpieza_vehiculo'
+  ];
+  
+  const camposPesado = [
+    'luces_altas', 'luces_medias', 'luces_exploradoras', 'luces_parqueo',
+    'luces_reversa', 'direccionales_delanteras', 'direccionales_traseras', 
+    'luces_placa', 'stops', 'cinturon_seguridad', 'pito', 'alarma_reversa',
+    'vidrio_panoramico', 'vidrios_laterales', 'espejos_retrovisores', 'limpiaparabrisas',
+    'asiento', 'brazos_suspension_delanteros', 'bujes', 'rotulas', 'terminales_direccion',
+    'estado_amortiguadores', 'fugas_amortiguadores', 'resortes', 'pasadores_pernos_grapas',
+    'pernos_rin', 'birlos', 'tuercas', 'base_quinta_rueda', 'seguros_quinta_rueda',
+    'brazos_suspension_traseros', 'gato', 'cruceta', 'extension', 'llave_ruedas',
+    'tacos', 'conos', 'botiquin', 'extintor', 'kit_carretera', 'chaleco_reflectivo',
+    'nivel_aceite_motor', 'nivel_refrigerante', 'fugas_motor', 'bandas', 'mangueras',
+    'soportes_motor', 'bateria_estado', 'alternador', 'marcha', 'tanque_combustible',
+    'llantas_labrado', 'caballete'
+  ];
+  
+  return tipo === 'pesado' ? camposPesado : camposLigero;
+}
+
 module.exports = {
-  validateRecord(record, tipo = 'ligero') {
+  validateRecord(record, tipo = 'ligero', strict = true) {
     const errors = [];
     const warnings = [];
       // Log de entrada de registro
-      console.log('Validando registro:', JSON.stringify(record));
-    // Solo advertencias para placa (sin validar formato)
-    if (!record.placa_vehiculo || record.placa_vehiculo.trim() === '') {
-      console.log('Advertencia: Registro sin placa');
-    }
-    // Solo advertencias para conductor/inspector (sin validar longitud)
-    const nombreField = tipo === 'pesado' ? 'nombre_inspector' : 'conductor_nombre';
-    if (!record[nombreField] || record[nombreField].trim() === '') {
-      console.log('Advertencia: Registro sin nombre');
-    }
-    // Validar fecha (mantener esta validación básica)
-    const fechaValida = normalizeFecha(record.fecha);
-    if (!fechaValida) {
-      errors.push({ field: 'fecha', message: 'Fecha de inspección requerida o formato inválido' });
-    }
-    // Validar campos críticos de fatiga (solo logs, sin warnings)
-    ['consumo_medicamentos','horas_sueno_suficientes','libre_sintomas_fatiga','condiciones_aptas'].forEach(campo => {
-      if (typeof record[campo] !== 'boolean') {
-        console.log(`Advertencia: Campo ${campo} no es booleano`);
+      console.log('Validando registro (strict=' + strict + '):', JSON.stringify(record));
+    
+    if (strict) {
+      // MODO ESTRICTO: Validar que TODOS los campos estén completos
+      const nombreField = tipo === 'pesado' ? 'nombre_inspector' : 'conductor_nombre';
+      
+      // Validar campos obligatorios de texto
+      if (!record.placa_vehiculo || record.placa_vehiculo.trim() === '') {
+        errors.push({ field: 'placa_vehiculo', message: 'Placa requerida (no puede estar vacía)' });
       }
-    });
-    // Validar kilometraje (solo log, sin warning)
-    const km = normalizeKilometraje(record.kilometraje);
-    if (km === 0) {
-      console.log('Advertencia: Kilometraje vacío o inválido');
-    }
-    // Validar turno (solo log, sin warning)
-    if (!record.turno || !['DIURNA','NOCTURNA'].includes(record.turno.toUpperCase())) {
-      console.log('Advertencia: Turno dudoso o vacío');
-    }
-    // Validar campos opcionales y otros
-    // ...agregar validaciones adicionales según reglas de negocio
-      // Log de resultado de validación
-      if (errors.length > 0 || warnings.length > 0) {
-        console.log('Resultado validación:', { errors, warnings });
+      if (!record[nombreField] || record[nombreField].trim() === '') {
+        errors.push({ field: nombreField, message: 'Nombre requerido (no puede estar vacío)' });
       }
+      if (!record.turno || record.turno.trim() === '') {
+        errors.push({ field: 'turno', message: 'Turno requerido (no puede estar vacío)' });
+      }
+      
+      // Validar fecha
+      const fechaValida = normalizeFecha(record.fecha);
+      if (!fechaValida) {
+        errors.push({ field: 'fecha', message: 'Fecha de inspección requerida o formato inválido' });
+      }
+      
+      // Validar kilometraje
+      const km = normalizeKilometraje(record.kilometraje);
+      if (km === 0) {
+        errors.push({ field: 'kilometraje', message: 'Kilometraje requerido (no puede estar vacío o en 0)' });
+      }
+      
+      // Validar que TODOS los campos booleanos existan y sean booleanos
+      const camposCriticos = ['consumo_medicamentos','horas_sueno_suficientes','libre_sintomas_fatiga','condiciones_aptas'];
+      camposCriticos.forEach(campo => {
+        if (record[campo] === null || record[campo] === undefined) {
+          errors.push({ field: campo, message: `${campo} requerido (no puede estar vacío)` });
+        }
+      });
+      
+      // Verificar TODOS los demás campos de inspección (dependiendo del tipo)
+      const camposInspeccion = obtenerCamposInspeccion(tipo);
+      camposInspeccion.forEach(campo => {
+        if (record[campo] === null || record[campo] === undefined) {
+          errors.push({ field: campo, message: `${campo} requerido (no puede estar vacío)` });
+        }
+      });
+      
+    } else {
+      // MODO PERMISIVO: Solo advertencias
+      if (!record.placa_vehiculo || record.placa_vehiculo.trim() === '') {
+        console.log('Advertencia: Registro sin placa');
+      }
+      const nombreField = tipo === 'pesado' ? 'nombre_inspector' : 'conductor_nombre';
+      if (!record[nombreField] || record[nombreField].trim() === '') {
+        console.log('Advertencia: Registro sin nombre');
+      }
+      const fechaValida = normalizeFecha(record.fecha);
+      if (!fechaValida) {
+        errors.push({ field: 'fecha', message: 'Fecha de inspección requerida o formato inválido' });
+      }
+      ['consumo_medicamentos','horas_sueno_suficientes','libre_sintomas_fatiga','condiciones_aptas'].forEach(campo => {
+        if (typeof record[campo] !== 'boolean') {
+          console.log(`Advertencia: Campo ${campo} no es booleano`);
+        }
+      });
+      const km = normalizeKilometraje(record.kilometraje);
+      if (km === 0) {
+        console.log('Advertencia: Kilometraje vacío o inválido');
+      }
+      if (!record.turno || !['DIURNA','NOCTURNA'].includes(record.turno.toUpperCase())) {
+        console.log('Advertencia: Turno dudoso o vacío');
+      }
+    }
+    
+    // Log de resultado de validación
+    if (errors.length > 0 || warnings.length > 0) {
+      console.log('Resultado validación:', { errors, warnings });
+    }
     return {
       isValid: errors.length === 0,
       errors,
