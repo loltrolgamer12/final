@@ -33,9 +33,9 @@ module.exports = {
       const rechazados = [];
 
       // Validar y detectar duplicados (optimizado en bloque)
-      // MODO ESTRICTO: true = requiere todos los campos completos
+      // MODO ESTRICTO: false temporalmente para debug (cambiar a true después)
       for (const record of mappedRecords) {
-        const validation = validationService.validateRecord(record, tipo, true);
+        const validation = validationService.validateRecord(record, tipo, false);
         if (!validation.isValid) {
           errors.push({ record, errors: validation.errors });
           rechazados.push({ ...record, motivo_rechazo: validation.errors.map(e => e.message).join('; ') });
@@ -174,6 +174,7 @@ module.exports = {
         validRecords: validRecords.length,
         duplicates: duplicates.length + dbDuplicates,
         errors: errors.length,
+        errorDetails: errors, // Detalles completos de los errores
         fileHash,
         insertados,
         rechazados: rechazados.length

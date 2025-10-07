@@ -37,7 +37,8 @@ module.exports = {
           registrosDuplicados: result.duplicates,
           registrosError: result.errors,
           fileHash: result.fileHash,
-          advertencias: result.warnings || []
+          advertencias: result.warnings || [],
+          muestraErrores: result.errorDetails?.slice(0, 5) || [] // Primeros 5 errores para debug
         });
       } else {
           console.error('Error en procesamiento:', result.error);
