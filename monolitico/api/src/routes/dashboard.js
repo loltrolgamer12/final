@@ -291,8 +291,8 @@ router.get('/vehiculos', async (req, res) => {
 			}
 		}
 		
-		// Convertir a array y FILTRAR solo los que tienen problemas
-		let data = Object.values(agrupadas).filter(v => v.alertas > 0);
+		// Convertir a array - MOSTRAR TODOS los vehículos (con y sin problemas)
+		let data = Object.values(agrupadas);
 		
 		// Filtrar por critico (true = CON problemas críticos, false = SIN problemas)
 		if (critico === 'true') {

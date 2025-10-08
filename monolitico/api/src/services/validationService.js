@@ -40,9 +40,27 @@ function normalizeFecha(value) {
 function obtenerCamposInspeccion(tipo) {
   // Campos de inspección QUE REALMENTE EXISTEN en el mapeo
   const camposLigero = [
+    // Luces
     'altas_bajas', 'direccionales', 'parqueo', 'freno', 'reversa',
-    'espejos', 'vidrio_frontal', 'frenos', 'frenos_emergencia',
-    'cinturones', 'puertas', 'vidrios', 'limpiaparabrisas'
+    // Espejos y vidrios
+    'espejos', 'vidrio_frontal', 'vidrios',
+    // Condiciones generales
+    'presentacion_aseo', 'pito', 'gps',
+    // Frenos y cinturones
+    'frenos', 'frenos_emergencia', 'cinturones',
+    // Carrocería
+    'puertas', 'limpiaparabrisas', 'extintor', 'botiquin', 'tapiceria', 'indicadores', 'objetos_sueltos',
+    // Niveles de fluidos
+    'nivel_aceite_motor', 'nivel_fluido_frenos', 'nivel_fluido_dir_hidraulica', 
+    'nivel_fluido_refrigerante', 'nivel_fluido_limpia_parabrisas',
+    // Motor y electricidad
+    'correas', 'baterias',
+    // Llantas
+    'llantas_labrado', 'llantas_sin_cortes', 'llanta_repuesto', 'copas_pernos',
+    // Suspensión y dirección
+    'suspension', 'direccion',
+    // Otros
+    'tapa_tanque', 'equipo_carretera', 'kit_ambiental', 'documentacion'
   ];
   
   const camposPesado = [
@@ -67,85 +85,14 @@ module.exports = {
   validateRecord(record, tipo = 'ligero', strict = true) {
     const errors = [];
     const warnings = [];
-      // Log de entrada de registro
-      console.log('Validando registro (strict=' + strict + '):', JSON.stringify(record));
     
-    if (strict) {
-      // MODO ESTRICTO: Validar que TODOS los campos estén completos
-      const nombreField = tipo === 'pesado' ? 'nombre_inspector' : 'conductor_nombre';
-      
-      // Validar campos obligatorios de texto
-      if (!record.placa_vehiculo || record.placa_vehiculo.trim() === '') {
-        errors.push({ field: 'placa_vehiculo', message: 'Placa requerida (no puede estar vacía)' });
-      }
-      if (!record[nombreField] || record[nombreField].trim() === '') {
-        errors.push({ field: nombreField, message: 'Nombre requerido (no puede estar vacío)' });
-      }
-      if (!record.turno || record.turno.trim() === '') {
-        errors.push({ field: 'turno', message: 'Turno requerido (no puede estar vacío)' });
-      }
-      
-      // Validar fecha
-      const fechaValida = normalizeFecha(record.fecha);
-      if (!fechaValida) {
-        errors.push({ field: 'fecha', message: 'Fecha de inspección requerida o formato inválido' });
-      }
-      
-      // Validar kilometraje
-      const km = normalizeKilometraje(record.kilometraje);
-      if (km === 0) {
-        errors.push({ field: 'kilometraje', message: 'Kilometraje requerido (no puede estar vacío o en 0)' });
-      }
-      
-      // Validar que TODOS los campos booleanos existan y sean booleanos
-      const camposCriticos = ['consumo_medicamentos','horas_sueno_suficientes','libre_sintomas_fatiga','condiciones_aptas'];
-      camposCriticos.forEach(campo => {
-        if (record[campo] === null || record[campo] === undefined) {
-          errors.push({ field: campo, message: `${campo} requerido (no puede estar vacío)` });
-        }
-      });
-      
-      // Verificar que los campos de inspección que SÍ existen en el record no estén vacíos
-      // Solo validamos los campos que realmente están en el schema/mapeo
-      const camposInspeccion = obtenerCamposInspeccion(tipo);
-      camposInspeccion.forEach(campo => {
-        // Solo validar si el campo existe en el record (está en el mapeo)
-        if (campo in record && (record[campo] === null || record[campo] === undefined)) {
-          errors.push({ field: campo, message: `${campo} requerido (no puede estar vacío)` });
-        }
-      });
-      
-    } else {
-      // MODO PERMISIVO: Solo advertencias
-      if (!record.placa_vehiculo || record.placa_vehiculo.trim() === '') {
-        console.log('Advertencia: Registro sin placa');
-      }
-      const nombreField = tipo === 'pesado' ? 'nombre_inspector' : 'conductor_nombre';
-      if (!record[nombreField] || record[nombreField].trim() === '') {
-        console.log('Advertencia: Registro sin nombre');
-      }
-      const fechaValida = normalizeFecha(record.fecha);
-      if (!fechaValida) {
-        errors.push({ field: 'fecha', message: 'Fecha de inspección requerida o formato inválido' });
-      }
-      ['consumo_medicamentos','horas_sueno_suficientes','libre_sintomas_fatiga','condiciones_aptas'].forEach(campo => {
-        if (typeof record[campo] !== 'boolean') {
-          console.log(`Advertencia: Campo ${campo} no es booleano`);
-        }
-      });
-      const km = normalizeKilometraje(record.kilometraje);
-      if (km === 0) {
-        console.log('Advertencia: Kilometraje vacío o inválido');
-      }
-      if (!record.turno || !['DIURNA','NOCTURNA'].includes(record.turno.toUpperCase())) {
-        console.log('Advertencia: Turno dudoso o vacío');
-      }
+    // VALIDACIÓN ÚNICA: Solo validar que la fecha sea válida
+    // Todos los demás campos pueden estar vacíos
+    const fechaValida = normalizeFecha(record.fecha);
+    if (!fechaValida) {
+      errors.push({ field: 'fecha', message: 'Fecha de inspección requerida o formato inválido' });
     }
     
-    // Log de resultado de validación
-    if (errors.length > 0 || warnings.length > 0) {
-      console.log('Resultado validación:', { errors, warnings });
-    }
     return {
       isValid: errors.length === 0,
       errors,

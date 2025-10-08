@@ -143,19 +143,54 @@ model RechazoInspeccion {
   horas_sueno_suficientes Boolean?
   libre_sintomas_fatiga Boolean?
   condiciones_aptas   Boolean?
+  // Luces
   altas_bajas         Boolean?
   direccionales       Boolean?
   parqueo             Boolean?
   freno               Boolean?
   reversa             Boolean?
+  // Espejos y vidrios
   espejos             Boolean?
   vidrio_frontal      Boolean?
+  vidrios             Boolean?
+  // Condiciones generales
+  presentacion_aseo   Boolean?
+  pito                Boolean?
+  gps                 Boolean?
+  // Frenos y cinturones
   frenos              Boolean?
   frenos_emergencia   Boolean?
   cinturones          Boolean?
+  // Carrocería
   puertas             Boolean?
-  vidrios             Boolean?
   limpiaparabrisas    Boolean?
+  extintor            Boolean?
+  botiquin            Boolean?
+  tapiceria           Boolean?
+  indicadores         Boolean?
+  objetos_sueltos     Boolean?
+  // Niveles de fluidos
+  nivel_aceite_motor  Boolean?
+  nivel_fluido_frenos Boolean?
+  nivel_fluido_dir_hidraulica Boolean?
+  nivel_fluido_refrigerante Boolean?
+  nivel_fluido_limpia_parabrisas Boolean?
+  // Motor y electricidad
+  correas             Boolean?
+  baterias            Boolean?
+  // Llantas
+  llantas_labrado     Boolean?
+  llantas_sin_cortes  Boolean?
+  llanta_repuesto     Boolean?
+  copas_pernos        Boolean?
+  // Suspensión y dirección
+  suspension          Boolean?
+  direccion           Boolean?
+  // Otros
+  tapa_tanque         Boolean?
+  equipo_carretera    Boolean?
+  kit_ambiental       Boolean?
+  documentacion       Boolean?
   observaciones       String?
   nivel_riesgo        String?
   puntaje_total       Int?
@@ -192,19 +227,54 @@ model Inspeccion {
   horas_sueno_suficientes Boolean
   libre_sintomas_fatiga Boolean
   condiciones_aptas   Boolean
+  // Luces
   altas_bajas         Boolean
   direccionales       Boolean
   parqueo             Boolean
   freno               Boolean
   reversa             Boolean
+  // Espejos y vidrios
   espejos             Boolean
   vidrio_frontal      Boolean
+  vidrios             Boolean
+  // Condiciones generales
+  presentacion_aseo   Boolean
+  pito                Boolean
+  gps                 Boolean
+  // Frenos y cinturones
   frenos              Boolean
   frenos_emergencia   Boolean
   cinturones          Boolean
+  // Carrocería
   puertas             Boolean
-  vidrios             Boolean
   limpiaparabrisas    Boolean
+  extintor            Boolean
+  botiquin            Boolean
+  tapiceria           Boolean
+  indicadores         Boolean
+  objetos_sueltos     Boolean
+  // Niveles de fluidos
+  nivel_aceite_motor  Boolean
+  nivel_fluido_frenos Boolean
+  nivel_fluido_dir_hidraulica Boolean
+  nivel_fluido_refrigerante Boolean
+  nivel_fluido_limpia_parabrisas Boolean
+  // Motor y electricidad
+  correas             Boolean
+  baterias            Boolean
+  // Llantas
+  llantas_labrado     Boolean
+  llantas_sin_cortes  Boolean
+  llanta_repuesto     Boolean
+  copas_pernos        Boolean
+  // Suspensión y dirección
+  suspension          Boolean
+  direccion           Boolean
+  // Otros
+  tapa_tanque         Boolean
+  equipo_carretera    Boolean
+  kit_ambiental       Boolean
+  documentacion       Boolean
   observaciones       String?
   nivel_riesgo        String
   puntaje_total       Int

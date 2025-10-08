@@ -34,8 +34,11 @@ module.exports = {
 
       // Validar y detectar duplicados (optimizado en bloque)
       // MODO ESTRICTO: true = requiere todos los campos completos (sin campos vacíos)
+      const strict = options.strict === 'false' || options.strict === false ? false : true;
+      console.log(`🔍 Modo de validación: ${strict ? 'ESTRICTO' : 'PERMISIVO'} (recibido: ${options.strict})`);
+      
       for (const record of mappedRecords) {
-        const validation = validationService.validateRecord(record, tipo, true);
+        const validation = validationService.validateRecord(record, tipo, strict);
         if (!validation.isValid) {
           errors.push({ record, errors: validation.errors });
           rechazados.push({ ...record, motivo_rechazo: validation.errors.map(e => e.message).join('; ') });
@@ -185,61 +188,99 @@ module.exports = {
   },
   mapRecord(row) {
     const validationService = require('./validationService');
-    // Mapear y normalizar columnas del Excel a campos del modelo
-    // Adaptación: aceptar nombres alternativos y normalizar fecha
-    function getConductorNombre(row) {
-      // Buscar la columna ignorando espacios y mayúsculas/minúsculas
+    
+    // Helper para obtener valor de columna con trim
+    const getCol = (colName) => {
       const keys = Object.keys(row);
-      const target = 'NOMBRE DE QUIEN REALIZA LA INSPECCIÓN';
-      let foundKey = keys.find(k => k.trim().toUpperCase() === target.trim().toUpperCase());
-      return (foundKey && row[foundKey]) ? row[foundKey] : (row['nombre_conductor'] || '');
-    }
-    function normalizeToISO(raw) {
-      if (!raw) return null;
-      // Si ya es ISO, retorna igual
-      if (/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(raw)) return raw;
-      // Si es MM/DD/YY o MM/DD/YYYY HH:mm:ss
-      let d = new Date(raw);
-      if (!isNaN(d.getTime())) return d.toISOString();
-      // Si es solo fecha tipo MM/DD/YY
-      const parts = raw.split(' ');
-      let datePart = parts[0];
-      let [month, day, year] = datePart.split(/[\/]/);
-      if (year && month && day) {
-        // Si el año es corto, asume 20xx
-        if (year.length === 2) year = '20' + year;
-        let d2 = new Date(`${year}-${month.padStart(2,'0')}-${day.padStart(2,'0')}`);
-        if (!isNaN(d2.getTime())) return d2.toISOString();
+      const found = keys.find(k => k.trim() === colName.trim());
+      return found ? row[found] : null;
+    };
+    
+    // Función para convertir número de Excel (serial date) a fecha ISO
+    const excelDateToISO = (excelDate) => {
+      if (!excelDate) return null;
+      
+      // Si ya es una cadena con formato ISO o fecha, intentar parsearla
+      if (typeof excelDate === 'string') {
+        const d = new Date(excelDate);
+        if (!isNaN(d.getTime())) return d.toISOString();
+        return null;
       }
+      
+      // Si es un número (formato de Excel: días desde 1900-01-01)
+      if (typeof excelDate === 'number') {
+        // Excel fecha base: 1900-01-01 (pero Excel cuenta desde 1900-01-00, bug histórico)
+        const excelEpoch = new Date(1899, 11, 30); // 30 dic 1899
+        const msPerDay = 24 * 60 * 60 * 1000;
+        const date = new Date(excelEpoch.getTime() + excelDate * msPerDay);
+        if (!isNaN(date.getTime())) return date.toISOString();
+      }
+      
       return null;
-    }
+    };
+    
     return {
-      marca_temporal: normalizeToISO(row['Marca temporal'] || row['fecha'] || ''),
-      conductor_nombre: getConductorNombre(row),
-      fecha: normalizeToISO(row['fecha'] || row['Marca temporal'] || ''),
-      contrato: row['CONTRATO'],
-      campo_coordinacion: row['CAMPO/COORDINACIÓN'],
-      placa_vehiculo: row['PLACA DEL VEHICULO'] ? String(row['PLACA DEL VEHICULO']).replace(/\s+/g, '').toUpperCase() : '',
-      kilometraje: validationService.normalizeKilometraje(row['KILOMETRAJE']),
-      turno: row['TURNO'] ? row['TURNO'].toUpperCase().trim() : '',
-      altas_bajas: validationService.normalizeBoolean(row['** ALTAS Y BAJAS']),
-      direccionales: validationService.normalizeBoolean(row['DIRECCIONALES DERECHA E IZQUIERDA']),
-      parqueo: validationService.normalizeBoolean(row['**DE PARQUEO']),
-      freno: validationService.normalizeBoolean(row['**DE FRENO']),
-      reversa: validationService.normalizeBoolean(row['**DE REVERSA Y ALARMA DE RETROCESO']),
-      espejos: validationService.normalizeBoolean(row['**ESPEJO CENTRAL Y ESPEJOS LATERALES']),
-      vidrio_frontal: validationService.normalizeBoolean(row['**VIDRIO FRONTAL']),
-      frenos: validationService.normalizeBoolean(row['**FRENOS']),
-      frenos_emergencia: validationService.normalizeBoolean(row['**FRENOS DE EMERGENCIA O DE MANO']),
-      cinturones: validationService.normalizeBoolean(row['**CINTURONES DE SEGURIDAD']),
-      puertas: validationService.normalizeBoolean(row['PUERTAS EN BUEN ESTADO']),
-      vidrios: validationService.normalizeBoolean(row['VIDRIOS EN BUEN ESTADO']),
-      limpiaparabrisas: validationService.normalizeBoolean(row['**LIMPIA BRISAS']),
-      observaciones: row['OBSERVACIONES'] || '',
-      horas_sueno_suficientes: validationService.normalizeBoolean(row['¿Ha dormido al menos 7 horas en las últimas 24 horas?']),
-      libre_sintomas_fatiga: validationService.normalizeBoolean(row['¿Se encuentra libre de síntomas de fatiga (Somnolencia, dolor de cabeza, irritabilidad)?']),
-      condiciones_aptas: validationService.normalizeBoolean(row['¿Se siente en condiciones físicas y mentales para conducir?']),
-      consumo_medicamentos: validationService.normalizeBoolean(row['¿Ha consumido medicamentos o sustancias que afecten su estado de alerta?*']),
+      marca_temporal: excelDateToISO(getCol('Marca temporal')),
+      conductor_nombre: (getCol('NOMBRE DE QUIEN REALIZA LA INSPECCIÓN ') || '').toString().trim(),
+      fecha: excelDateToISO(getCol('Marca temporal')),
+      contrato: getCol('CONTRATO') || '',
+      campo_coordinacion: getCol('CAMPO/COORDINACIÓN') || '',
+      placa_vehiculo: getCol('PLACA DEL VEHICULO') ? String(getCol('PLACA DEL VEHICULO')).replace(/\s+/g, '').toUpperCase() : '',
+      kilometraje: validationService.normalizeKilometraje(getCol('KILOMETRAJE')),
+      turno: getCol('TURNO') ? String(getCol('TURNO')).toUpperCase().trim() : '',
+      // Luces
+      altas_bajas: validationService.normalizeBoolean(getCol('** ALTAS Y BAJAS')),
+      direccionales: validationService.normalizeBoolean(getCol('DIRECCIONALES DERECHA E IZQUIERDA')),
+      parqueo: validationService.normalizeBoolean(getCol('**DE PARQUEO')),
+      freno: validationService.normalizeBoolean(getCol('**DE FRENO')),
+      reversa: validationService.normalizeBoolean(getCol('**DE REVERSA Y ALARMA DE RETROCESO')),
+      // Espejos y vidrios
+      espejos: validationService.normalizeBoolean(getCol('**ESPEJO CENTRAL Y ESPEJOS LATERALES')),
+      vidrio_frontal: validationService.normalizeBoolean(getCol('**VIDRIO FRONTAL')),
+      vidrios: validationService.normalizeBoolean(getCol('VIDRIOS EN BUEN ESTADO')),
+      // Condiciones generales
+      presentacion_aseo: validationService.normalizeBoolean(getCol('PRESENTACIÓN DE ORDEN Y ASEO')),
+      pito: validationService.normalizeBoolean(getCol('PITO')),
+      gps: validationService.normalizeBoolean(getCol('SISTEMA DE MONITOREO GPS ')),
+      // Frenos y cinturones
+      frenos: validationService.normalizeBoolean(getCol('**FRENOS')),
+      frenos_emergencia: validationService.normalizeBoolean(getCol('**FRENOS DE EMERGENCIA O DE MANO')),
+      cinturones: validationService.normalizeBoolean(getCol('**CINTURONES DE SEGURIDAD')),
+      // Carrocería
+      puertas: validationService.normalizeBoolean(getCol('PUERTAS EN BUEN ESTADO')),
+      limpiaparabrisas: validationService.normalizeBoolean(getCol('**LIMPIA BRISAS')),
+      extintor: validationService.normalizeBoolean(getCol('EXTINTOR VIGENTE')),
+      botiquin: validationService.normalizeBoolean(getCol('BOTIQUÍN')),
+      tapiceria: validationService.normalizeBoolean(getCol('ESTADO GENERAL DE TAPICERÍA')),
+      indicadores: validationService.normalizeBoolean(getCol('Indicadores (nivel de combustible, temperatura, velocímetro y aceite)')),
+      objetos_sueltos: validationService.normalizeBoolean(getCol('**Verificar la ausencia de objetos sueltos en la cabina que puedan distraer al conductor')),
+      // Niveles de fluidos
+      nivel_aceite_motor: validationService.normalizeBoolean(getCol('**NIVELES DE FLUIDOS ACEITE MOTOR')),
+      nivel_fluido_frenos: validationService.normalizeBoolean(getCol('**NIVELES DE FLUIDO DE FRENOS')),
+      nivel_fluido_dir_hidraulica: validationService.normalizeBoolean(getCol('**NIVELES DE FLUIDO DE DIRECCIÓN HIDRAÚLICA')),
+      nivel_fluido_refrigerante: validationService.normalizeBoolean(getCol('**NIVELES DE FLUIDO REFRIGERANTE')),
+      nivel_fluido_limpia_parabrisas: validationService.normalizeBoolean(getCol('NIVELES DE FLUIDO LIMPIA PARABRISAS')),
+      // Motor y electricidad
+      correas: validationService.normalizeBoolean(getCol('ESTADO DE CORREAS')),
+      baterias: validationService.normalizeBoolean(getCol('ESTADO DE BATERÍAS, CABLES, CONEXIONES')),
+      // Llantas
+      llantas_labrado: validationService.normalizeBoolean(getCol('**LLANTAS - LABRADO (min 2mm DE LABRADO)')),
+      llantas_sin_cortes: validationService.normalizeBoolean(getCol('**LLANTAS - SIN CORTADURAS Y SIN ABULTAMIENTOS')),
+      llanta_repuesto: validationService.normalizeBoolean(getCol('LLANTA DE REPUESTO')),
+      copas_pernos: validationService.normalizeBoolean(getCol('**COPAS O PERNOS DE SUJECIÓN DE LAS LLANTAS')),
+      // Suspensión y dirección
+      suspension: validationService.normalizeBoolean(getCol('**SUSPENSIÓN (TERMINALES)')),
+      direccion: validationService.normalizeBoolean(getCol('**DIRECCIÓN (TERMINALES)')),
+      // Otros
+      tapa_tanque: validationService.normalizeBoolean(getCol('Tapa de tanque de combustible en buen estado')),
+      equipo_carretera: validationService.normalizeBoolean(getCol('Equipo de carretera: gato, llave de pernos, herramienta básica, triángulos o conos, bloques, chaleco, señal pare-siga')),
+      kit_ambiental: validationService.normalizeBoolean(getCol('Kit ambiental')),
+      documentacion: validationService.normalizeBoolean(getCol('Documentación: tecnomecánica y de gases, tarjeta de propiedad, SOAT, licencia de conducción y permiso para conducir interno')),
+      observaciones: getCol('OBSERVACIONES') || '',
+      horas_sueno_suficientes: validationService.normalizeBoolean(getCol('¿Ha dormido al menos 7 horas en las últimas 24 horas?')),
+      libre_sintomas_fatiga: validationService.normalizeBoolean(getCol('¿Se encuentra libre de síntomas de fatiga (Somnolencia, dolor de cabeza, irritabilidad)?')),
+      condiciones_aptas: validationService.normalizeBoolean(getCol('¿Se siente en condiciones físicas y mentales para conducir? ')),
+      consumo_medicamentos: validationService.normalizeBoolean(getCol('¿Ha consumido medicamentos o sustancias que afecten su estado de alerta?*')),
       nivel_riesgo: this.calcularRiesgo(row),
       puntaje_total: this.calcularPuntaje(row),
       puntaje_fatiga: this.calcularPuntajeFatiga(row),
