@@ -438,13 +438,39 @@ module.exports = {
     return 'BAJO';
   },
   calcularPuntaje(row) {
-    // Ejemplo: sumar 1 por cada campo "CUMPLE" en inspección mecánica
+    // Sumar 1 por cada campo "CUMPLE" en inspección mecánica (50 campos)
     let puntaje = 0;
     const campos = [
-      '** ALTAS Y BAJAS','DIRECCIONALES DERECHA E IZQUIERDA','**DE PARQUEO','**DE FRENO','**DE REVERSA Y ALARMA DE RETROCESO','**ESPEJO CENTRAL Y ESPEJOS LATERALES','**VIDRIO FRONTAL','**FRENOS','**FRENOS DE EMERGENCIA O DE MANO','**CINTURONES DE SEGURIDAD','PUERTAS EN BUEN ESTADO','VIDRIOS EN BUEN ESTADO','**LIMPIA BRISAS'
+      // Luces
+      '** ALTAS Y BAJAS', 'DIRECCIONALES DERECHA E IZQUIERDA', '**DE PARQUEO', '**DE FRENO', '**DE REVERSA Y ALARMA DE RETROCESO',
+      // Espejos y vidrios
+      '**ESPEJO CENTRAL Y ESPEJOS LATERALES', '**VIDRIO FRONTAL', 'VIDRIOS EN BUEN ESTADO',
+      // Condiciones generales
+      'PRESENTACIÓN DE ORDEN Y ASEO', 'PITO', 'SISTEMA DE MONITOREO GPS ',
+      // Frenos y cinturones
+      '**FRENOS', '**FRENOS DE EMERGENCIA O DE MANO', '**CINTURONES DE SEGURIDAD',
+      // Carrocería
+      'PUERTAS EN BUEN ESTADO', '**LIMPIA BRISAS', 'EXTINTOR VIGENTE', 'BOTIQUÍN', 'ESTADO GENERAL DE TAPICERÍA',
+      'Indicadores (nivel de combustible, temperatura, velocímetro y aceite)',
+      '**Verificar la ausencia de objetos sueltos en la cabina que puedan distraer al conductor',
+      // Niveles de fluidos
+      '**NIVELES DE FLUIDOS ACEITE MOTOR', '**NIVELES DE FLUIDO DE FRENOS', '**NIVELES DE FLUIDO DE DIRECCIÓN HIDRAÚLICA',
+      '**NIVELES DE FLUIDO REFRIGERANTE', 'NIVELES DE FLUIDO LIMPIA PARABRISAS',
+      // Motor y electricidad
+      'ESTADO DE CORREAS', 'ESTADO DE BATERÍAS, CABLES, CONEXIONES',
+      // Llantas
+      '**LLANTAS - LABRADO (min 2mm DE LABRADO)', '**LLANTAS - SIN CORTADURAS Y SIN ABULTAMIENTOS',
+      'LLANTA DE REPUESTO', '**COPAS O PERNOS DE SUJECIÓN DE LAS LLANTAS',
+      // Suspensión y dirección
+      '**SUSPENSIÓN (TERMINALES)', '**DIRECCIÓN (TERMINALES)',
+      // Otros
+      'Tapa de tanque de combustible en buen estado',
+      'Equipo de carretera: gato, llave de pernos, herramienta básica, triángulos o conos, bloques, chaleco, señal pare-siga',
+      'Kit ambiental',
+      'Documentación: tecnomecánica y de gases, tarjeta de propiedad, SOAT, licencia de conducción y permiso para conducir interno'
     ];
     campos.forEach(campo => {
-      if (row[campo] === 'CUMPLE') puntaje++;
+      if (row[campo] === 'CUMPLE' || row[campo] === 'Cumple') puntaje++;
     });
     return puntaje;
   },

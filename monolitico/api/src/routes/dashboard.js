@@ -257,14 +257,30 @@ router.get('/vehiculos', async (req, res) => {
 			}
 			
 			// Verificar si hay CUALQUIER problema del vehículo (no solo críticos)
-			const camposVehiculo = [
-				'altas_bajas', 'direccionales', 'parqueo', 'freno', 'reversa',
-				'espejos', 'vidrio_frontal', 'frenos', 'frenos_emergencia',
-				'cinturones', 'puertas', 'vidrios', 'limpiaparabrisas'
-			];
-			const tieneProblemaVehiculo = camposVehiculo.some(c => i[c] === false);
-			
-			// Determinar si es CRÍTICO (mismo criterio de riesgo)
+		const camposVehiculo = [
+			// Luces
+			'altas_bajas', 'direccionales', 'parqueo', 'freno', 'reversa',
+			// Espejos y vidrios
+			'espejos', 'vidrio_frontal', 'vidrios',
+			// Condiciones generales
+			'presentacion_aseo', 'pito', 'gps',
+			// Frenos y cinturones
+			'frenos', 'frenos_emergencia', 'cinturones',
+			// Carrocería
+			'puertas', 'limpiaparabrisas', 'extintor', 'botiquin', 'tapiceria', 'indicadores', 'objetos_sueltos',
+			// Niveles de fluidos
+			'nivel_aceite_motor', 'nivel_fluido_frenos', 'nivel_fluido_dir_hidraulica', 
+			'nivel_fluido_refrigerante', 'nivel_fluido_limpia_parabrisas',
+			// Motor y electricidad
+			'correas', 'baterias',
+			// Llantas
+			'llantas_labrado', 'llantas_sin_cortes', 'llanta_repuesto', 'copas_pernos',
+			// Suspensión y dirección
+			'suspension', 'direccion',
+			// Otros
+			'tapa_tanque', 'equipo_carretera', 'kit_ambiental', 'documentacion'
+		];
+		const tieneProblemaVehiculo = camposVehiculo.some(c => i[c] === false);			// Determinar si es CRÍTICO (mismo criterio de riesgo)
 			const esCritico = 
 				i.frenos === false ||
 				i.frenos_emergencia === false ||
