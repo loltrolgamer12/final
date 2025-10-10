@@ -8,7 +8,7 @@ const responseUtils = require('../utils/responseUtils');
 router.get('/conductores', async (req, res) => {
 	try {
 		// Filtros avanzados por query
-		const { dia, mes, ano, conductor, placa, cumplimiento, fatiga, tipo } = req.query;
+		const { dia, mes, ano, conductor, placa, cumplimiento, fatiga, tipo, contrato, campo } = req.query;
 		const incluirLigero = !tipo || tipo === 'ligero' || tipo === 'todos';
 		const incluirPesado = !tipo || tipo === 'pesado' || tipo === 'todos';
 
@@ -41,6 +41,8 @@ router.get('/conductores', async (req, res) => {
 		if (Object.keys(fechaFiltro).length) where.fecha = fechaFiltro;
 		if (conductor) where.conductor_nombre = { contains: conductor, mode: 'insensitive' };
 		if (placa) where.placa_vehiculo = { contains: placa, mode: 'insensitive' };
+		if (contrato) where.contrato = { contains: contrato, mode: 'insensitive' };
+		if (campo) where.campo_coordinacion = { contains: campo, mode: 'insensitive' };
 
 		// Buscar inspecciones filtradas de ambas tablas
 		let inspecciones = [];
@@ -172,7 +174,7 @@ const { getMotivoCriticoDetallado } = require('../utils/responseUtils');
 router.get('/vehiculos', async (req, res) => {
 	try {
 		// Filtros avanzados por query
-		const { dia, mes, ano, conductor, placa, cumplimiento, critico, tipo } = req.query;
+		const { dia, mes, ano, conductor, placa, cumplimiento, critico, tipo, contrato, campo } = req.query;
 		const incluirLigero = !tipo || tipo === 'ligero' || tipo === 'todos';
 		const incluirPesado = !tipo || tipo === 'pesado' || tipo === 'todos';
 
@@ -205,6 +207,8 @@ router.get('/vehiculos', async (req, res) => {
 		if (Object.keys(fechaFiltro).length) where.fecha = fechaFiltro;
 		if (conductor) where.conductor_nombre = { contains: conductor, mode: 'insensitive' };
 		if (placa) where.placa_vehiculo = { contains: placa, mode: 'insensitive' };
+		if (contrato) where.contrato = { contains: contrato, mode: 'insensitive' };
+		if (campo) where.campo_coordinacion = { contains: campo, mode: 'insensitive' };
 
 		// Buscar inspecciones filtradas de ambas tablas
 		let inspecciones = [];
