@@ -30,8 +30,9 @@
   <!-- Portada -->
   <div class="portada">
     <img src="{{logoPath}}" alt="Logo">
-    <h1>Reporte HQ-FO-40</h1>
+    <h1>Reporte HQ-FO-40/41</h1>
     <h2>{{mes}} {{ano}}</h2>
+    <p><strong>Tipo de vehículos:</strong> {{tipo}}</p>
     <p>Generado automáticamente por el sistema</p>
   </div>
 
@@ -40,6 +41,7 @@
   <!-- Resumen General -->
   <h2>Resumen General</h2>
   <table>
+    <tr><td>Tipo de vehículos</td><td><strong>{{tipo}}</strong></td></tr>
     <tr><td>Total inspecciones</td><td class="kpi">{{totalInspecciones}}</td></tr>
     <tr><td class="rojo">Alertas críticas</td><td>{{totalAlertas}}</td></tr>
     <tr><td class="rojo">Riesgo alto</td><td>{{riesgoAlto}}</td></tr>

@@ -366,7 +366,7 @@ module.exports = {
       nivel_fluido_limpia_parabrisas: validationService.normalizeBoolean(row['Nivel de fluido limpia parabrisas']),
       correas: validationService.normalizeBoolean(row['Estado de correas']),
       baterias: validationService.normalizeBoolean(row['Estado de baterías, cables, conexiones']),
-      llantas_labrado: validationService.normalizeBoolean(row['**Llantas - Labrado (min 3mm de labrado) ']),
+      llantas_labrado: validationService.normalizeBoolean(row['**Llantas - Labrado (min 3mm de labrado)	']),
       llantas_sin_cortes: validationService.normalizeBoolean(row['**Llantas - Sin cortaduras y sin abultamientos']),
       llanta_repuesto: validationService.normalizeBoolean(row['Llanta de repuesto']),
       copas_pernos: validationService.normalizeBoolean(row['**Copas o pernos de sujeción de las llantas']),

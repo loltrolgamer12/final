@@ -146,11 +146,17 @@ export default function ReportesPage() {
     setExportLoading(true);
     
     try {
-      const res = await axios.get(`/api/reportes/pdf?mes=${mes}&ano=${ano}`, { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
+      let url = `/api/reportes/pdf?mes=${mes}&ano=${ano}`;
+      if (tipo && tipo !== 'todos') url += `&tipo=${tipo}`;
+      if (contrato) url += `&contrato=${encodeURIComponent(contrato)}`;
+      if (campo) url += `&campo=${encodeURIComponent(campo)}`;
+      
+      const res = await axios.get(url, { responseType: 'blob' });
+      const blobUrl = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `reporte_${meses[mes-1]}_${ano}.pdf`);
+      link.href = blobUrl;
+      const tipoStr = tipo === 'todos' ? 'todos' : (tipo === 'pesado' ? 'pesados' : 'ligeros');
+      link.setAttribute('download', `reporte_${tipoStr}_${meses[mes-1]}_${ano}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -172,12 +178,16 @@ export default function ReportesPage() {
       let url = `/api/reportes/excel?mes=${mes}&ano=${ano}`;
       if (diaInicio) url += `&diaInicio=${diaInicio}`;
       if (diaFin) url += `&diaFin=${diaFin}`;
+      if (tipo && tipo !== 'todos') url += `&tipo=${tipo}`;
+      if (contrato) url += `&contrato=${encodeURIComponent(contrato)}`;
+      if (campo) url += `&campo=${encodeURIComponent(campo)}`;
       
       const res = await axios.get(url, { responseType: 'blob' });
       const blobUrl = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.setAttribute('download', `reporte_${meses[mes-1]}_${ano}.xlsx`);
+      const tipoStr = tipo === 'todos' ? 'todos' : (tipo === 'pesado' ? 'pesados' : 'ligeros');
+      link.setAttribute('download', `reporte_${tipoStr}_${meses[mes-1]}_${ano}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.remove();

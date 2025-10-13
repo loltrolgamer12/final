@@ -1,11 +1,11 @@
 const prisma = require('../config/database');
 const XLSX = require('xlsx');
-const { getMotivoCriticoDetallado } = require('../utils/responseUtils');
+const { getMotivoCriticoDetallado, getMotivoCriticoDetalladoPesado } = require('../utils/responseUtils');
 
 module.exports = {
   async getReporteExcel(req, res) {
     try {
-      const { mes, ano, diaInicio, diaFin } = req.query;
+      const { mes, ano, diaInicio, diaFin, tipo = 'ligero', contrato, campo } = req.query;
       if (!mes || !ano) {
         return res.status(400).json({ error: 'Mes y año requeridos' });
       }
@@ -35,21 +35,54 @@ module.exports = {
         hasta.setMonth(hasta.getMonth() + 1);
       }
 
-      const inspecciones = await prisma.inspeccion.findMany({
-        where: {
-          fecha: { gte: desde, lt: hasta }
-        }
-      });
+      // Determinar qué tabla(s) consultar basado en el tipo
+      const usarLigero = tipo === 'ligero' || tipo === 'todos';
+      const usarPesado = tipo === 'pesado' || tipo === 'todos';
 
-      // Obtener rechazados en el mismo rango
-      const rechazados = await prisma.rechazoInspeccion.findMany({
-        where: {
-          OR: [
-            { fecha: { gte: desde, lt: hasta } },
-            { marca_temporal: { gte: desde, lt: hasta } }
-          ]
-        }
-      });
+      // Construir filtro común
+      const whereComun = {
+        fecha: { gte: desde, lt: hasta }
+      };
+      if (contrato) whereComun.contrato = contrato;
+      if (campo) whereComun.campo_coordinacion = campo;
+
+      // Consultar inspecciones según tipo
+      let inspecciones = [];
+      let rechazados = [];
+
+      if (usarLigero) {
+        const inspeccionesLigero = await prisma.inspeccion.findMany({
+          where: whereComun
+        });
+        inspecciones = inspecciones.concat(inspeccionesLigero.map(i => ({ ...i, _tipo: 'ligero' })));
+
+        const rechazadosLigero = await prisma.rechazoInspeccion.findMany({
+          where: {
+            OR: [
+              { fecha: { gte: desde, lt: hasta } },
+              { marca_temporal: { gte: desde, lt: hasta } }
+            ]
+          }
+        });
+        rechazados = rechazados.concat(rechazadosLigero.map(r => ({ ...r, _tipo: 'ligero' })));
+      }
+
+      if (usarPesado) {
+        const inspeccionesPesado = await prisma.inspeccionPesado.findMany({
+          where: whereComun
+        });
+        inspecciones = inspecciones.concat(inspeccionesPesado.map(i => ({ ...i, _tipo: 'pesado' })));
+
+        const rechazadosPesado = await prisma.rechazoInspeccionPesado.findMany({
+          where: {
+            OR: [
+              { fecha: { gte: desde, lt: hasta } },
+              { marca_temporal: { gte: desde, lt: hasta } }
+            ]
+          }
+        });
+        rechazados = rechazados.concat(rechazadosPesado.map(r => ({ ...r, _tipo: 'pesado' })));
+      }
 
       if (!inspecciones.length && !rechazados.length) {
         return res.status(404).json({ error: 'No hay datos para ese rango' });
@@ -74,6 +107,7 @@ module.exports = {
       const fatigaAdvertencia = inspecciones
         .filter(i => i.nivel_riesgo === 'ALTO' || i.consumo_medicamentos)
         .map(i => ({
+          tipo: i._tipo === 'pesado' ? 'Pesado' : 'Ligero',
           conductor: i.conductor_nombre,
           fecha: new Date(i.fecha).toLocaleDateString(),
           motivo: i.consumo_medicamentos
@@ -81,29 +115,92 @@ module.exports = {
             : 'Fatiga reportada'
         }));
 
-      // Vehículos advertencia (motivo detallado)
-      // TODOS los campos del vehículo que pueden tener fallas
-      const vehiculosAdvertencia = inspecciones
+      // Vehículos advertencia - SEPARADOS por tipo
+      // LIGEROS: Todos los campos del vehículo ligero
+      const vehiculosAdvertenciaLigero = inspecciones
+        .filter(i => i._tipo === 'ligero')
         .filter(i => {
-          // Lista COMPLETA de campos booleanos de inspección del vehículo ligero
           const camposVehiculo = [
+            // Luces
             'altas_bajas', 'direccionales', 'parqueo', 'freno', 'reversa',
-            'espejos', 'vidrio_frontal', 'frenos', 'frenos_emergencia',
-            'cinturones', 'puertas', 'vidrios', 'limpiaparabrisas'
+            // Espejos y vidrios
+            'espejos', 'vidrio_frontal', 'vidrios',
+            // Condiciones generales
+            'presentacion_aseo', 'pito', 'gps',
+            // Frenos y cinturones
+            'frenos', 'frenos_emergencia', 'cinturones',
+            // Carrocería
+            'puertas', 'limpiaparabrisas', 'extintor', 'botiquin', 'tapiceria', 'indicadores', 'objetos_sueltos',
+            // Niveles de fluidos
+            'nivel_aceite_motor', 'nivel_fluido_frenos', 'nivel_fluido_dir_hidraulica', 
+            'nivel_fluido_refrigerante', 'nivel_fluido_limpia_parabrisas',
+            // Motor y electricidad
+            'correas', 'baterias',
+            // Llantas
+            'llantas_labrado', 'llantas_sin_cortes', 'llanta_repuesto', 'copas_pernos',
+            // Suspensión y dirección
+            'suspension', 'direccion',
+            // Otros
+            'tapa_tanque', 'equipo_carretera', 'kit_ambiental', 'documentacion'
           ];
-          // Incluir si AL MENOS UN campo está en false (tiene falla)
           return camposVehiculo.some(c => i[c] === false);
         })
         .map(i => ({
+          tipo: 'Ligero',
           placa: i.placa_vehiculo,
           fecha: new Date(i.fecha).toLocaleDateString(),
           conductor: i.conductor_nombre,
           motivo: getMotivoCriticoDetallado(i)
         }));
 
+      // PESADOS: Todos los campos del vehículo pesado
+      const vehiculosAdvertenciaPesado = inspecciones
+        .filter(i => i._tipo === 'pesado')
+        .filter(i => {
+          const camposVehiculoPesado = [
+            // Luces
+            'altas_bajas', 'direccionales', 'parqueo', 'freno', 'reversa',
+            // Espejos y vidrios
+            'espejos', 'vidrio_frontal', 'vidrios',
+            // Condiciones generales
+            'presentacion_aseo', 'pito', 'gps',
+            // Frenos y cinturones
+            'frenos', 'frenos_emergencia', 'cinturones',
+            // Carrocería
+            'puertas', 'limpiaparabrisas', 'extintor', 'botiquin', 'tapiceria', 'indicadores', 'objetos_sueltos',
+            // Niveles de fluidos
+            'nivel_aceite_motor', 'nivel_fluido_frenos', 'nivel_fluido_dir_hidraulica', 
+            'nivel_fluido_refrigerante', 'nivel_fluido_limpia_parabrisas',
+            // Motor y electricidad
+            'correas', 'baterias',
+            // Llantas (3mm para pesados)
+            'llantas_labrado', 'llantas_sin_cortes', 'llanta_repuesto', 'copas_pernos',
+            // Suspensión y dirección
+            'suspension', 'direccion',
+            // Otros
+            'tapa_tanque', 'equipo_carretera', 'kit_ambiental', 'documentacion',
+            // ESPECÍFICOS DE PESADOS - Sistema de aire móvil 100
+            'aire_compresor', 'aire_mangueras', 'aire_tanque', 'aire_secador'
+          ];
+          return camposVehiculoPesado.some(c => i[c] === false);
+        })
+        .map(i => ({
+          tipo: 'Pesado',
+          placa: i.placa_vehiculo,
+          fecha: new Date(i.fecha).toLocaleDateString(),
+          conductor: i.conductor_nombre,
+          motivo: getMotivoCriticoDetalladoPesado(i)
+        }));
+
+      // Combinar advertencias de ligeros y pesados
+      const vehiculosAdvertencia = [...vehiculosAdvertenciaLigero, ...vehiculosAdvertenciaPesado];
+
       // KPIs y totales para hoja Resumen
       const resumen = [
+        { kpi: 'Tipo de vehículos', valor: tipo === 'todos' ? 'Ligeros y Pesados' : (tipo === 'pesado' ? 'Pesados' : 'Ligeros') },
         { kpi: 'Total inspecciones', valor: inspecciones.length },
+        { kpi: 'Inspecciones ligeros', valor: inspecciones.filter(i => i._tipo === 'ligero').length },
+        { kpi: 'Inspecciones pesados', valor: inspecciones.filter(i => i._tipo === 'pesado').length },
         { kpi: 'Alertas críticas', valor: inspecciones.filter(i => i.tiene_alertas_criticas).length },
         { kpi: 'Riesgo alto', valor: inspecciones.filter(i => i.nivel_riesgo === 'ALTO').length },
         { kpi: 'Riesgo medio', valor: inspecciones.filter(i => i.nivel_riesgo === 'MEDIO').length },
@@ -118,14 +215,15 @@ module.exports = {
 
       // Hoja Leyenda
       const leyenda = [
-        { Campo: 'Resumen', Descripcion: 'KPIs y totales generales del periodo.' },
-        { Campo: 'Inspecciones', Descripcion: 'Todas las inspecciones válidas registradas.' },
-        { Campo: 'Rechazados', Descripcion: 'Registros rechazados por validación o duplicado, con motivo.' },
+        { Campo: 'Resumen', Descripcion: 'KPIs y totales generales del periodo (ligeros y/o pesados).' },
+        { Campo: 'Inspecciones', Descripcion: 'Todas las inspecciones válidas registradas (indica tipo).' },
+        { Campo: 'Rechazados', Descripcion: 'Registros rechazados por validación o duplicado, con motivo (indica tipo).' },
         { Campo: 'Conductores', Descripcion: 'Conductores en advertencia por inactividad.' },
-        { Campo: 'Fatiga', Descripcion: 'Conductores con fatiga o consumo de medicamentos.' },
-        { Campo: 'Vehículos', Descripcion: 'Vehículos con advertencias críticas.' },
+        { Campo: 'Fatiga', Descripcion: 'Conductores con fatiga o consumo de medicamentos (indica tipo).' },
+        { Campo: 'Vehículos', Descripcion: 'Vehículos con advertencias críticas (indica tipo y TODOS los componentes fallados).' },
+        { Campo: 'Tipo', Descripcion: 'Ligero (2mm labrado) o Pesado (3mm labrado, incluye sistema aire móvil 100).' },
         { Campo: 'Campos comunes', Descripcion: 'Fecha de Inspección, Nombre del Conductor, Placa del Vehículo, Nivel de Riesgo, etc.' },
-        { Campo: 'Motivo', Descripcion: 'Explicación del motivo de advertencia, rechazo o fatiga.' },
+        { Campo: 'Motivo', Descripcion: 'Explicación DETALLADA del motivo de advertencia, rechazo o fatiga (TODOS los componentes fallados).' },
         { Campo: 'Colores', Descripcion: 'Rojo: Crítico/Rechazado. Azul: Cumplimiento. Naranja: Advertencia.' }
       ];
       const wsLeyenda = XLSX.utils.json_to_sheet(leyenda);
@@ -138,6 +236,7 @@ module.exports = {
       // Hoja Inspecciones (renombrar columnas)
       if (inspecciones.length) {
         const inspeccionesAmigable = inspecciones.map(i => ({
+          'Tipo': i._tipo === 'pesado' ? 'Pesado' : 'Ligero',
           'Fecha de Inspección': new Date(i.fecha).toLocaleDateString(),
           'Nombre del Conductor': i.conductor_nombre,
           'Placa del Vehículo': i.placa_vehiculo,
@@ -150,7 +249,8 @@ module.exports = {
         }));
         // Agregar totales al final
         inspeccionesAmigable.push({
-          'Fecha de Inspección': 'Totales:',
+          'Tipo': 'TOTALES:',
+          'Fecha de Inspección': '',
           'Nombre del Conductor': '',
           'Placa del Vehículo': '',
           'Nivel de Riesgo': '',
@@ -167,6 +267,7 @@ module.exports = {
       // Hoja Rechazados (renombrar columnas y motivo)
       if (rechazados.length) {
         const rechazadosAmigable = rechazados.map(r => ({
+          'Tipo': r._tipo === 'pesado' ? 'Pesado' : 'Ligero',
           'Fecha de Registro': r.fecha ? new Date(r.fecha).toLocaleDateString() : '',
           'Nombre del Conductor': r.conductor_nombre,
           'Placa del Vehículo': r.placa_vehiculo,

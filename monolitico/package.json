@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node api/server.js",
     "dev": "nodemon api/server.js",
-    "build": "cd src && npm install && npm run build && cp -r build ../api/public/build",
+    "dev:frontend": "cd src && npm start",
+    "dev:both": "concurrently \"npm run dev\" \"npm run dev:frontend\"",
+    "build": "cd src && npm install && npm run build && rm -rf ../api/public/build && cp -r build ../api/public/build",
+    "build:monolitico": "npm run build && npm start",
     "prisma:migrate": "cd api && npx prisma migrate dev --name init",
     "prisma:generate": "cd api && npx prisma generate"
   },

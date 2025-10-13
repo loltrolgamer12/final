@@ -6,16 +6,35 @@ const responseUtils = require('../utils/responseUtils');
 module.exports = {
   async getReportePDF(req, res) {
     try {
-      const { mes, ano } = req.query;
+      const { mes, ano, tipo = 'ligero', contrato, campo } = req.query;
       if (!mes || !ano) return responseUtils.errorResponse(res, 'PDF_ERROR', 'Mes y año requeridos');
       const desde = new Date(`${ano}-${mes}-01`);
       const hasta = new Date(desde);
       hasta.setMonth(hasta.getMonth() + 1);
-      const inspecciones = await prisma.inspeccion.findMany({
-        where: {
-          fecha: { gte: desde, lt: hasta }
-        }
-      });
+
+      // Determinar qué tabla(s) consultar basado en el tipo
+      const usarLigero = tipo === 'ligero' || tipo === 'todos';
+      const usarPesado = tipo === 'pesado' || tipo === 'todos';
+
+      // Construir filtro común
+      const whereComun = {
+        fecha: { gte: desde, lt: hasta }
+      };
+      if (contrato) whereComun.contrato = contrato;
+      if (campo) whereComun.campo_coordinacion = campo;
+
+      // Consultar inspecciones según tipo
+      let inspecciones = [];
+
+      if (usarLigero) {
+        const inspeccionesLigero = await prisma.inspeccion.findMany({ where: whereComun });
+        inspecciones = inspecciones.concat(inspeccionesLigero.map(i => ({ ...i, _tipo: 'ligero' })));
+      }
+
+      if (usarPesado) {
+        const inspeccionesPesado = await prisma.inspeccionPesado.findMany({ where: whereComun });
+        inspecciones = inspecciones.concat(inspeccionesPesado.map(i => ({ ...i, _tipo: 'pesado' })));
+      }
       // Mensajes detallados
       const conductores = {};
       inspecciones.forEach(i => {
@@ -50,9 +69,11 @@ module.exports = {
       const mesNombre = mesesNombres[parseInt(mes,10)-1] || mes;
       const logoPath = path.join(__dirname, '../../public/logo.jpeg');
       const fechaGeneracion = new Date().toLocaleDateString();
+      const tipoTexto = tipo === 'todos' ? 'Ligeros y Pesados' : (tipo === 'pesado' ? 'Pesados' : 'Ligeros');
       const html = await pdfHtmlService.renderHtmlReporte({
         mes: mesNombre,
         ano,
+        tipo: tipoTexto,
         // logoPath: `file://${logoPath}`,
         fechaGeneracion,
         totalInspecciones,
@@ -67,7 +88,7 @@ module.exports = {
       console.log('HTML generado para PDF:', html);
       const pdfBuffer = await pdfHtmlService.generarPdfDesdeHtml(html);
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename=reporte_${mesNombre}_${ano}.pdf`);
+      res.setHeader('Content-Disposition', `attachment; filename=reporte_${tipoTexto.replace(' ', '_')}_${mesNombre}_${ano}.pdf`);
       res.send(pdfBuffer);
     } catch (error) {
       console.error('Error al generar PDF:', error);

@@ -33,13 +33,28 @@ module.exports = {
 
       // Inspecciones en el rango
       const { tipo = 'ligero', contrato, campo } = req.query;
-      const tabla = tipo === 'pesado' ? prisma.inspeccionPesado : prisma.inspeccion;
-      const where = {
+      
+      // Construir filtro común
+      const whereComun = {
         fecha: { gte: desde, lt: hasta }
       };
-      if (contrato) where.contrato = contrato;
-      if (campo) where.campo_coordinacion = campo;
-      const inspecciones = await tabla.findMany({ where });
+      if (contrato) whereComun.contrato = contrato;
+      if (campo) whereComun.campo_coordinacion = campo;
+
+      // Consultar inspecciones según tipo
+      let inspecciones = [];
+      const usarLigero = tipo === 'ligero' || tipo === 'todos';
+      const usarPesado = tipo === 'pesado' || tipo === 'todos';
+
+      if (usarLigero) {
+        const inspeccionesLigero = await prisma.inspeccion.findMany({ where: whereComun });
+        inspecciones = inspecciones.concat(inspeccionesLigero.map(i => ({ ...i, _tipo: 'ligero' })));
+      }
+
+      if (usarPesado) {
+        const inspeccionesPesado = await prisma.inspeccionPesado.findMany({ where: whereComun });
+        inspecciones = inspecciones.concat(inspeccionesPesado.map(i => ({ ...i, _tipo: 'pesado' })));
+      }
 
       // Incumplimiento de conductores
       const conductores = {};
