@@ -1,0 +1,266 @@
+🔍 VALIDACIÓN COMPLETA DE CAMPOS - VEHÍCULOS LIGEROS
+
+Total de columnas en Excel: 50
+
+================================================================================
+LISTADO COMPLETO DE COLUMNAS DEL EXCEL
+================================================================================
+
+001. "Marca temporal"
+     Visualizado: "Marca·temporal"
+     Longitud: 14 caracteres
+
+002. "NOMBRE DE QUIEN REALIZA LA INSPECCIÓN "
+     Visualizado: "NOMBRE·DE·QUIEN·REALIZA·LA·INSPECCIÓN·"
+     Longitud: 38 caracteres
+
+003. "CONTRATO"
+     Visualizado: "CONTRATO"
+     Longitud: 8 caracteres
+     Valores: OPERACIÓN FACILIDADES, MANTENIMIENTO (CONSORCIO SAS-CFP), ADMINISTRACIÓN, HOCOL, OTRO
+
+004. "CAMPO/COORDINACIÓN"
+     Visualizado: "CAMPO/COORDINACIÓN"
+     Longitud: 18 caracteres
+
+005. "PLACA DEL VEHICULO"
+     Visualizado: "PLACA·DEL·VEHICULO"
+     Longitud: 18 caracteres
+
+006. "KILOMETRAJE"
+     Visualizado: "KILOMETRAJE"
+     Longitud: 11 caracteres
+
+007. "TURNO"
+     Visualizado: "TURNO"
+     Longitud: 5 caracteres
+     Valores: DIURNA, NOCTURNO, DIURNA, NOCTURNO
+
+008. "** ALTAS Y BAJAS"
+     Visualizado: "**·ALTAS·Y·BAJAS"
+     Longitud: 16 caracteres
+     Valores: CUMPLE, NO CUMPLE, Opción 3
+
+009. "DIRECCIONALES DERECHA E IZQUIERDA"
+     Visualizado: "DIRECCIONALES·DERECHA·E·IZQUIERDA"
+     Longitud: 33 caracteres
+     Valores: Cumple, NO CUMPLE
+
+010. "**DE PARQUEO"
+     Visualizado: "**DE·PARQUEO"
+     Longitud: 12 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+011. "**DE FRENO"
+     Visualizado: "**DE·FRENO"
+     Longitud: 10 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+012. "**DE REVERSA Y ALARMA DE RETROCESO"
+     Visualizado: "**DE·REVERSA·Y·ALARMA·DE·RETROCESO"
+     Longitud: 34 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+013. "**ESPEJO CENTRAL Y ESPEJOS LATERALES"
+     Visualizado: "**ESPEJO·CENTRAL·Y·ESPEJOS·LATERALES"
+     Longitud: 36 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+014. "**VIDRIO FRONTAL"
+     Visualizado: "**VIDRIO·FRONTAL"
+     Longitud: 16 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+015. "PRESENTACIÓN DE ORDEN Y ASEO"
+     Visualizado: "PRESENTACIÓN·DE·ORDEN·Y·ASEO"
+     Longitud: 28 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+016. "PITO"
+     Visualizado: "PITO"
+     Longitud: 4 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+017. "SISTEMA DE MONITOREO GPS "
+     Visualizado: "SISTEMA·DE·MONITOREO·GPS·"
+     Longitud: 25 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+018. "**FRENOS"
+     Visualizado: "**FRENOS"
+     Longitud: 8 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+019. "**FRENOS DE EMERGENCIA O DE MANO"
+     Visualizado: "**FRENOS·DE·EMERGENCIA·O·DE·MANO"
+     Longitud: 32 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+020. "**CINTURONES DE SEGURIDAD"
+     Visualizado: "**CINTURONES·DE·SEGURIDAD"
+     Longitud: 25 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+021. "PUERTAS EN BUEN ESTADO"
+     Visualizado: "PUERTAS·EN·BUEN·ESTADO"
+     Longitud: 22 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+022. "VIDRIOS EN BUEN ESTADO"
+     Visualizado: "VIDRIOS·EN·BUEN·ESTADO"
+     Longitud: 22 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+023. "**LIMPIA BRISAS"
+     Visualizado: "**LIMPIA·BRISAS"
+     Longitud: 15 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+024. "EXTINTOR VIGENTE"
+     Visualizado: "EXTINTOR·VIGENTE"
+     Longitud: 16 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+025. "BOTIQUÍN"
+     Visualizado: "BOTIQUÍN"
+     Longitud: 8 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+026. "ESTADO GENERAL DE TAPICERÍA"
+     Visualizado: "ESTADO·GENERAL·DE·TAPICERÍA"
+     Longitud: 27 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+027. "Indicadores (nivel de combustible, temperatura, velocímetro y aceite)"
+     Visualizado: "Indicadores·(nivel·de·combustible,·temperatura,·velocímetro·y·aceite)"
+     Longitud: 69 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+028. "**Verificar la ausencia de objetos sueltos en la cabina que puedan distraer al conductor"
+     Visualizado: "**Verificar·la·ausencia·de·objetos·sueltos·en·la·cabina·que·puedan·distraer·al·conductor"
+     Longitud: 88 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+029. "**NIVELES DE FLUIDOS ACEITE MOTOR"
+     Visualizado: "**NIVELES·DE·FLUIDOS·ACEITE·MOTOR"
+     Longitud: 33 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+030. "**NIVELES DE FLUIDO DE FRENOS"
+     Visualizado: "**NIVELES·DE·FLUIDO·DE·FRENOS"
+     Longitud: 29 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+031. "**NIVELES DE FLUIDO DE DIRECCIÓN HIDRAÚLICA"
+     Visualizado: "**NIVELES·DE·FLUIDO·DE·DIRECCIÓN·HIDRAÚLICA"
+     Longitud: 43 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+032. "**NIVELES DE FLUIDO REFRIGERANTE"
+     Visualizado: "**NIVELES·DE·FLUIDO·REFRIGERANTE"
+     Longitud: 32 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+033. "NIVELES DE FLUIDO LIMPIA PARABRISAS"
+     Visualizado: "NIVELES·DE·FLUIDO·LIMPIA·PARABRISAS"
+     Longitud: 35 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+034. "ESTADO DE CORREAS"
+     Visualizado: "ESTADO·DE·CORREAS"
+     Longitud: 17 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+035. "ESTADO DE BATERÍAS, CABLES, CONEXIONES"
+     Visualizado: "ESTADO·DE·BATERÍAS,·CABLES,·CONEXIONES"
+     Longitud: 38 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+036. "**LLANTAS - LABRADO (min 2mm DE LABRADO)"
+     Visualizado: "**LLANTAS·-·LABRADO·(min·2mm·DE·LABRADO)"
+     Longitud: 40 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+037. "**LLANTAS - SIN CORTADURAS Y SIN ABULTAMIENTOS"
+     Visualizado: "**LLANTAS·-·SIN·CORTADURAS·Y·SIN·ABULTAMIENTOS"
+     Longitud: 46 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+038. "LLANTA DE REPUESTO"
+     Visualizado: "LLANTA·DE·REPUESTO"
+     Longitud: 18 caracteres
+     Valores: CUMPLE
+
+039. "**COPAS O PERNOS DE SUJECIÓN DE LAS LLANTAS"
+     Visualizado: "**COPAS·O·PERNOS·DE·SUJECIÓN·DE·LAS·LLANTAS"
+     Longitud: 43 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+040. "**SUSPENSIÓN (TERMINALES)"
+     Visualizado: "**SUSPENSIÓN·(TERMINALES)"
+     Longitud: 25 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+041. "**DIRECCIÓN (TERMINALES)"
+     Visualizado: "**DIRECCIÓN·(TERMINALES)"
+     Longitud: 24 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+042. "Tapa de tanque de combustible en buen estado"
+     Visualizado: "Tapa·de·tanque·de·combustible·en·buen·estado"
+     Longitud: 44 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+043. "Equipo de carretera: gato, llave de pernos, herramienta básica, triángulos o conos, bloques, chaleco, señal pare-siga"
+     Visualizado: "Equipo·de·carretera:·gato,·llave·de·pernos,·herramienta·básica,·triángulos·o·conos,·bloques,·chaleco,·señal·pare-siga"
+     Longitud: 117 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+044. "Kit ambiental"
+     Visualizado: "Kit·ambiental"
+     Longitud: 13 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+045. "Documentación: tecnomecánica y de gases, tarjeta de propiedad, SOAT, licencia de conducción y permiso para conducir interno"
+     Visualizado: "Documentación:·tecnomecánica·y·de·gases,·tarjeta·de·propiedad,·SOAT,·licencia·de·conducción·y·permiso·para·conducir·interno"
+     Longitud: 123 caracteres
+     Valores: CUMPLE, NO CUMPLE
+
+046. "OBSERVACIONES"
+     Visualizado: "OBSERVACIONES"
+     Longitud: 13 caracteres
+
+047. "¿Ha dormido al menos 7 horas en las últimas 24 horas?"
+     Visualizado: "¿Ha·dormido·al·menos·7·horas·en·las·últimas·24·horas?"
+     Longitud: 53 caracteres
+     Valores: Cumple, No cumple
+
+048. "¿Se encuentra libre de síntomas de fatiga (Somnolencia, dolor de cabeza, irritabilidad)?"
+     Visualizado: "¿Se·encuentra·libre·de·síntomas·de·fatiga·(Somnolencia,·dolor·de·cabeza,·irritabilidad)?"
+     Longitud: 88 caracteres
+     Valores: Cumple, No cumple
+
+049. "¿Se siente en condiciones físicas y mentales para conducir? "
+     Visualizado: "¿Se·siente·en·condiciones·físicas·y·mentales·para·conducir?·"
+     Longitud: 60 caracteres
+     Valores: Cumple, No cumple
+
+050. "¿Ha consumido medicamentos o sustancias que afecten su estado de alerta?*"
+     Visualizado: "¿Ha·consumido·medicamentos·o·sustancias·que·afecten·su·estado·de·alerta?*"
+     Longitud: 73 caracteres
+     Valores: No, Sí
+
+
+================================================================================
+CAMPOS QUE PROBABLEMENTE NECESITAN CORRECCIÓN (terminan con espacios/tabs)
+================================================================================
+
+"NOMBRE DE QUIEN REALIZA LA INSPECCIÓN "
+Visualizado: "NOMBRE·DE·QUIEN·REALIZA·LA·INSPECCIÓN·"
+
+"SISTEMA DE MONITOREO GPS "
+Visualizado: "SISTEMA·DE·MONITOREO·GPS·"
+
+"¿Se siente en condiciones físicas y mentales para conducir? "
+Visualizado: "¿Se·siente·en·condiciones·físicas·y·mentales·para·conducir?·"
+

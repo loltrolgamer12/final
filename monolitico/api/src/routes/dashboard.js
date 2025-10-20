@@ -49,8 +49,7 @@ router.get('/conductores', async (req, res) => {
 		
 		if (incluirLigero) {
 			const inspeccionesLigero = await prisma.inspeccion.findMany({ where });
-			const conTipo = inspeccionesLigero.map(i => ({ ...i, _tipo: 'ligero' }));
-			inspecciones = [...inspecciones, ...conTipo];
+			inspecciones = [...inspecciones, ...inspeccionesLigero];
 		}
 		
 		if (incluirPesado) {
@@ -66,12 +65,11 @@ router.get('/conductores', async (req, res) => {
 				delete wherePesado.conductor_nombre;
 			}
 			const inspeccionesPesado = await prisma.inspeccionPesado.findMany({ where: wherePesado });
-			// Normalizar campos para pesados (fecha y conductor_nombre) y marcar tipo
+			// Normalizar campos para pesados (fecha y conductor_nombre)
 			const inspeccionesPesadoNormalizadas = inspeccionesPesado.map(i => ({
 				...i,
 				fecha: i.marca_temporal,
-				conductor_nombre: i.nombre_inspector,
-				_tipo: 'pesado'
+				conductor_nombre: i.nombre_inspector
 			}));
 			inspecciones = [...inspecciones, ...inspeccionesPesadoNormalizadas];
 		}
@@ -170,7 +168,7 @@ router.get('/conductores', async (req, res) => {
 
 // Utilidad para motivo crítico de vehículo (detallado)
 
-const { getMotivoCriticoDetallado, getMotivoCriticoDetalladoPesado } = require('../utils/responseUtils');
+const { getMotivoCriticoDetallado } = require('../utils/responseUtils');
 
 // Dashboard ejecutivo de vehículos
 router.get('/vehiculos', async (req, res) => {
@@ -217,8 +215,7 @@ router.get('/vehiculos', async (req, res) => {
 		
 		if (incluirLigero) {
 			const inspeccionesLigero = await prisma.inspeccion.findMany({ where });
-			const conTipo = inspeccionesLigero.map(i => ({ ...i, _tipo: 'ligero' }));
-			inspecciones = [...inspecciones, ...conTipo];
+			inspecciones = [...inspecciones, ...inspeccionesLigero];
 		}
 		
 		if (incluirPesado) {
@@ -234,26 +231,26 @@ router.get('/vehiculos', async (req, res) => {
 				delete wherePesado.conductor_nombre;
 			}
 			const inspeccionesPesado = await prisma.inspeccionPesado.findMany({ where: wherePesado });
-			// Normalizar campos para pesados (fecha y conductor_nombre) y marcar tipo
+			// Normalizar campos para pesados (fecha y conductor_nombre)
 			const inspeccionesPesadoNormalizadas = inspeccionesPesado.map(i => ({
 				...i,
 				fecha: i.marca_temporal,
-				conductor_nombre: i.nombre_inspector,
-				_tipo: 'pesado'
+				conductor_nombre: i.nombre_inspector
 			}));
 			inspecciones = [...inspecciones, ...inspeccionesPesadoNormalizadas];
 		}
 		
-		// Agrupar SOLO por placa (ignorar placas vacías/null)
+		// Agrupar SOLO por placa (si no hay placa, usar conductor como identificador)
 		const agrupadas = {};
 		for (const i of inspecciones) {
-			const key = i.placa_vehiculo;
-			// Ignorar inspecciones sin placa
-			if (!key || key.trim() === '') continue;
+			// Si no hay placa válida, usar conductor + ID como clave única
+			const key = (i.placa_vehiculo && i.placa_vehiculo.trim() !== '') 
+				? i.placa_vehiculo 
+				: `SIN_PLACA_${i.conductor_nombre || 'DESCONOCIDO'}_${i.id || ''}`;
 			
 			if (!agrupadas[key]) {
 				agrupadas[key] = {
-					placa: i.placa_vehiculo,
+					placa: i.placa_vehiculo || 'SIN PLACA',
 					conductor: i.conductor_nombre,
 					alertas: 0,
 					alertasCriticas: 0,
@@ -307,12 +304,8 @@ router.get('/vehiculos', async (req, res) => {
 				
 				// Guardar motivo y conductor de la inspección más reciente CON PROBLEMAS
 				if (!agrupadas[key].fechaCritico || new Date(i.fecha) > new Date(agrupadas[key].fechaCritico)) {
-					// Usar la función correcta según el tipo de vehículo
-					if (i._tipo === 'pesado') {
-						agrupadas[key].motivoCritico = responseUtils.getMotivoCriticoDetalladoPesado(i);
-					} else {
-						agrupadas[key].motivoCritico = responseUtils.getMotivoCriticoDetallado(i);
-					}
+					// Usar la misma función que el reporte Excel para consistencia
+					agrupadas[key].motivoCritico = responseUtils.getMotivoCriticoDetallado(i);
 					agrupadas[key].fechaCritico = i.fecha;
 					agrupadas[key].conductor = i.conductor_nombre;
 				}
