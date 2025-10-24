@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
 const XLSX = require('xlsx');
 const path = require('path');
@@ -42,7 +43,7 @@ async function corregirLabradoPesados() {
   console.log('🔧 CORRIGIENDO DATOS DE LABRADO DE NEUMÁTICOS - VEHÍCULOS PESADOS\n');
   
   // 1. Leer el Excel
-  const archivoExcel = path.join(__dirname, '../../pruebas/HQ-FO-41 INSPECCIÓN DIARIA DE VEHÍCULOS PESADOS 1.xlsx');
+  const archivoExcel = path.join(__dirname, '../../pruebas/HQ-FO-41 INSPECCIÓN DIARIA DE VEHÍCULOS PESADOS (respuestas) (12).xlsx');
   const workbook = XLSX.readFile(archivoExcel);
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const data = XLSX.utils.sheet_to_json(sheet);
@@ -64,8 +65,13 @@ async function corregirLabradoPesados() {
         String(row['NOMBRE DE QUIEN REALIZA LA INSPECCIÓN']).trim() : '';
       const marcaTemporal = row['Marca temporal'];
       
-      // El nombre CORRECTO de la columna con TAB al final
-      const labradoValue = row['**Llantas - Labrado (min 3mm de labrado)\t'];
+      // Detectar automáticamente la columna correcta de labrado
+      const columnas = Object.keys(row);
+      const columnaLabrado = columnas.find(col => 
+        col.includes('Llantas') && col.includes('Labrado') && col.includes('min 3mm')
+      );
+      
+      const labradoValue = columnaLabrado ? row[columnaLabrado] : null;
       const labradoCorrecto = normalizeBoolean(labradoValue);
       
       if (!placa || !marcaTemporal) continue;

@@ -44,7 +44,12 @@ async function corregirLabrado() {
         String(row['NOMBRE DE QUIEN REALIZA LA INSPECCIÓN']).trim() : '';
       
       // Nombre CORRECTO con TAB al final
-      const labradoValue = row['**Llantas - Labrado (min 3mm de labrado)\t'];
+      // Detectar automáticamente la columna correcta de labrado
+      const columnas = Object.keys(row);
+      const columnaLabrado = columnas.find(col => 
+        col.includes('Llantas') && col.includes('Labrado') && col.includes('min 3mm')
+      );
+      const labradoValue = columnaLabrado ? row[columnaLabrado] : null;
       const labradoCorrecto = normalizeBoolean(labradoValue);
       
       if (!placa) continue;

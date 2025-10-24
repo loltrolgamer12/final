@@ -6,6 +6,8 @@ console.log('🔍 VERIFICANDO NOMBRE EXACTO DE LA COLUMNA DE LABRADO...\n');
 
 // Buscar archivo Excel de pesados
 const posiblesArchivos = [
+  '../../pruebas/HQ-FO-41 INSPECCIÓN DIARIA DE VEHÍCULOS PESADOS (respuestas) (12).xlsx',
+  '../../pruebas/HQ-FO-41 INSPECCIÓN DIARIA DE VEHÍCULOS PESADOS 1.xlsx',
   'HQ-FO-41 INSPECCIÓN DIARIA DE VEHÍCULOS PESADOS (respuestas) (5).xlsx',
   'HQ-FO-41 INSPECCIÓN DIARIA DE VEHÍCULOS PESADOS (respuestas).xlsx',
   '../pruebas/HQ-FO-41 INSPECCIÓN DIARIA DE VEHÍCULOS PESADOS.xlsx'
