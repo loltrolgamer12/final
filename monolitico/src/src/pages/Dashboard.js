@@ -53,7 +53,7 @@ import {
   XAxis, 
   YAxis, 
   CartesianGrid, 
-  Tooltip 
+  Tooltip as RechartsTooltip 
 } from 'recharts';
 
 // Eliminado: StatusCard estilizado local. Usar componente importado.
@@ -422,7 +422,7 @@ export default function Dashboard() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="motivo" />
                     <YAxis allowDecimals={false} />
-                    <Tooltip />
+                    <RechartsTooltip />
                     <Bar dataKey="count" fill="#dc3545" />
                   </BarChart>
                 </ResponsiveContainer>
