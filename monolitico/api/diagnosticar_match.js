@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
 const XLSX = require('xlsx');
 const path = require('path');
@@ -8,18 +9,34 @@ async function diagnosticarProblema() {
   console.log('🔍 DIAGNOSTICANDO PROBLEMA DE COINCIDENCIAS...\n');
   
   // Leer Excel
-  const archivoExcel = path.join(__dirname, '../../pruebas/HQ-FO-41 INSPECCIÓN DIARIA DE VEHÍCULOS PESADOS 1.xlsx');
+  const archivoExcel = path.join(__dirname, '../../pruebas/HQ-FO-41 INSPECCIÓN DIARIA DE VEHÍCULOS PESADOS (respuestas) (12).xlsx');
   const workbook = XLSX.readFile(archivoExcel);
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const data = XLSX.utils.sheet_to_json(sheet);
   
-  console.log('=== PRIMEROS 3 REGISTROS DEL EXCEL ===\n');
+  console.log('=== TODAS LAS COLUMNAS DEL EXCEL ===\n');
+  const columnas = Object.keys(data[0]);
+  console.log(`Total de columnas: ${columnas.length}`);
+  columnas.forEach((col, i) => {
+    if (col.toLowerCase().includes('llanta') || col.toLowerCase().includes('labrado')) {
+      console.log(`${i + 1}. "${col}" (longitud: ${col.length})`);
+    }
+  });
+  
+  console.log('\n=== PRIMEROS 3 REGISTROS DEL EXCEL ===\n');
   data.slice(0, 3).forEach((row, idx) => {
     console.log(`Registro ${idx + 1}:`);
     console.log(`  Marca temporal: ${row['Marca temporal']} (tipo: ${typeof row['Marca temporal']})`);
     console.log(`  Placa: ${row['PLACA DEL VEHICULO']}`);
     console.log(`  Inspector: ${row['NOMBRE DE QUIEN REALIZA LA INSPECCIÓN']}`);
-    console.log(`  Labrado: ${row['**Llantas - Labrado (min 3mm de labrado)    ']}`);
+    
+    // Buscar la columna de labrado
+    const labradoKeys = columnas.filter(col => col.includes('Llantas') && col.includes('Labrado'));
+    if (labradoKeys.length > 0) {
+      console.log(`  Labrado (${labradoKeys[0]}): ${row[labradoKeys[0]]}`);
+    } else {
+      console.log(`  Labrado: NO ENCONTRADO`);
+    }
     console.log('');
   });
   

@@ -348,35 +348,154 @@ router.get('/vehiculos', async (req, res) => {
 // Dashboard KPIs y tendencias
 router.get('/', async (req, res) => {
 	try {
-		// Obtener filtro de tipo (ligero, pesado, o todos por defecto)
-		const { tipo } = req.query;
+		// Filtros avanzados por query - igual que vehículos y conductores
+		const { tipo, dia, mes, ano, conductor, placa, cumplimiento, critico, fatiga, contrato, campo } = req.query;
 		const incluirLigero = !tipo || tipo === 'ligero' || tipo === 'todos';
 		const incluirPesado = !tipo || tipo === 'pesado' || tipo === 'todos';
 
-		// Total de inspecciones
+		// Construir filtro de fecha
+		let fechaFiltro = {};
+		if (ano && mes && dia) {
+			// Día exacto
+			const mesStr = mes.toString().padStart(2, '0');
+			const diaStr = dia.toString().padStart(2, '0');
+			const desde = new Date(`${ano}-${mesStr}-${diaStr}`);
+			const hasta = new Date(desde);
+			hasta.setDate(hasta.getDate() + 1);
+			fechaFiltro = { gte: desde, lt: hasta };
+		} else if (ano && mes) {
+			// Mes completo
+			const mesStr = mes.toString().padStart(2, '0');
+			const desde = new Date(`${ano}-${mesStr}-01`);
+			const hasta = new Date(desde);
+			hasta.setMonth(hasta.getMonth() + 1);
+			fechaFiltro = { gte: desde, lt: hasta };
+		} else if (ano) {
+			// Año completo
+			const desde = new Date(`${ano}-01-01`);
+			const hasta = new Date(`${ano}-12-31`);
+			hasta.setDate(hasta.getDate() + 1);
+			fechaFiltro = { gte: desde, lt: hasta };
+		}
+
+		// Construir filtros básicos para ligeros y pesados
+		let whereLigero = {};
+		let wherePesado = {};
+		
+		if (Object.keys(fechaFiltro).length) {
+			whereLigero.fecha = fechaFiltro;
+			wherePesado.marca_temporal = fechaFiltro;
+		}
+		if (conductor) {
+			whereLigero.conductor_nombre = { contains: conductor, mode: 'insensitive' };
+			wherePesado.nombre_inspector = { contains: conductor, mode: 'insensitive' };
+		}
+		if (placa) {
+			whereLigero.placa_vehiculo = { contains: placa, mode: 'insensitive' };
+			wherePesado.placa_vehiculo = { contains: placa, mode: 'insensitive' };
+		}
+		if (contrato) {
+			whereLigero.contrato = { contains: contrato, mode: 'insensitive' };
+			wherePesado.contrato = { contains: contrato, mode: 'insensitive' };
+		}
+		if (campo) {
+			whereLigero.campo_coordinacion = { contains: campo, mode: 'insensitive' };
+			wherePesado.campo_coordinacion = { contains: campo, mode: 'insensitive' };
+		}
+
+		// Filtros por cumplimiento
+		if (cumplimiento === 'true') {
+			whereLigero.tiene_alertas_criticas = false;
+			wherePesado.tiene_alertas_criticas = false;
+		} else if (cumplimiento === 'false') {
+			whereLigero.tiene_alertas_criticas = true;
+			wherePesado.tiene_alertas_criticas = true;
+		}
+
+		// Filtros por riesgo crítico
+		if (critico === 'true') {
+			whereLigero.nivel_riesgo = 'ALTO';
+			wherePesado.nivel_riesgo = 'ALTO';
+		} else if (critico === 'false') {
+			whereLigero.nivel_riesgo = { in: ['BAJO', 'MEDIO'] };
+			wherePesado.nivel_riesgo = { in: ['BAJO', 'MEDIO'] };
+		}
+
+		// Filtros por fatiga (solo para conductores)
+		if (fatiga === 'true') {
+			// Conductores CON problemas de fatiga
+			whereLigero.OR = [
+				{ consumo_medicamentos: true },
+				{ horas_sueno_suficientes: false },
+				{ libre_sintomas_fatiga: false }
+			];
+			wherePesado.OR = [
+				{ consumo_medicamentos: true },
+				{ horas_sueno_suficientes: false },
+				{ libre_sintomas_fatiga: false }
+			];
+		} else if (fatiga === 'false') {
+			// Conductores SIN problemas de fatiga
+			whereLigero.AND = [
+				{ consumo_medicamentos: false },
+				{ horas_sueno_suficientes: true },
+				{ libre_sintomas_fatiga: true }
+			];
+			wherePesado.AND = [
+				{ consumo_medicamentos: false },
+				{ horas_sueno_suficientes: true },
+				{ libre_sintomas_fatiga: true }
+			];
+		}
+
+		// Total de inspecciones (aplicando filtros)
 		let totalInspecciones = 0;
-		if (incluirLigero) totalInspecciones += await prisma.inspeccion.count();
-		if (incluirPesado) totalInspecciones += await prisma.inspeccionPesado.count();
+		if (incluirLigero) totalInspecciones += await prisma.inspeccion.count({ where: whereLigero });
+		if (incluirPesado) totalInspecciones += await prisma.inspeccionPesado.count({ where: wherePesado });
 
-		// Total de alertas críticas
+		// Total de alertas críticas (aplicando filtros)
 		let totalAlertas = 0;
-		if (incluirLigero) totalAlertas += await prisma.inspeccion.count({ where: { tiene_alertas_criticas: true } });
-		if (incluirPesado) totalAlertas += await prisma.inspeccionPesado.count({ where: { tiene_alertas_criticas: true } });
+		if (incluirLigero) {
+			const whereAlertasLigero = { ...whereLigero, tiene_alertas_criticas: true };
+			totalAlertas += await prisma.inspeccion.count({ where: whereAlertasLigero });
+		}
+		if (incluirPesado) {
+			const whereAlertasPesado = { ...wherePesado, tiene_alertas_criticas: true };
+			totalAlertas += await prisma.inspeccionPesado.count({ where: whereAlertasPesado });
+		}
 
-		// Inspecciones en condiciones normales: sin alertas críticas y nivel_riesgo BAJO
+		// Inspecciones en condiciones normales: sin alertas críticas y nivel_riesgo BAJO (aplicando filtros)
 		let bajoRiesgo = 0;
-		if (incluirLigero) bajoRiesgo += await prisma.inspeccion.count({ where: { nivel_riesgo: 'BAJO', tiene_alertas_criticas: false } });
-		if (incluirPesado) bajoRiesgo += await prisma.inspeccionPesado.count({ where: { nivel_riesgo: 'BAJO', tiene_alertas_criticas: false } });
+		if (incluirLigero) {
+			const whereBajoLigero = { ...whereLigero, nivel_riesgo: 'BAJO', tiene_alertas_criticas: false };
+			bajoRiesgo += await prisma.inspeccion.count({ where: whereBajoLigero });
+		}
+		if (incluirPesado) {
+			const whereBajoPesado = { ...wherePesado, nivel_riesgo: 'BAJO', tiene_alertas_criticas: false };
+			bajoRiesgo += await prisma.inspeccionPesado.count({ where: whereBajoPesado });
+		}
 
-		// Inspecciones con riesgo medio (pueden o no tener alerta crítica)
+		// Inspecciones con riesgo medio (aplicando filtros)
 		let medioRiesgo = 0;
-		if (incluirLigero) medioRiesgo += await prisma.inspeccion.count({ where: { nivel_riesgo: 'MEDIO' } });
-		if (incluirPesado) medioRiesgo += await prisma.inspeccionPesado.count({ where: { nivel_riesgo: 'MEDIO' } });
+		if (incluirLigero) {
+			const whereMedioLigero = { ...whereLigero, nivel_riesgo: 'MEDIO' };
+			medioRiesgo += await prisma.inspeccion.count({ where: whereMedioLigero });
+		}
+		if (incluirPesado) {
+			const whereMedioPesado = { ...wherePesado, nivel_riesgo: 'MEDIO' };
+			medioRiesgo += await prisma.inspeccionPesado.count({ where: whereMedioPesado });
+		}
 
-		// Inspecciones con riesgo alto (pueden o no tener alerta crítica)
+		// Inspecciones con riesgo alto (aplicando filtros)
 		let altoRiesgo = 0;
-		if (incluirLigero) altoRiesgo += await prisma.inspeccion.count({ where: { nivel_riesgo: 'ALTO' } });
-		if (incluirPesado) altoRiesgo += await prisma.inspeccionPesado.count({ where: { nivel_riesgo: 'ALTO' } });
+		if (incluirLigero) {
+			const whereAltoLigero = { ...whereLigero, nivel_riesgo: 'ALTO' };
+			altoRiesgo += await prisma.inspeccion.count({ where: whereAltoLigero });
+		}
+		if (incluirPesado) {
+			const whereAltoPesado = { ...wherePesado, nivel_riesgo: 'ALTO' };
+			altoRiesgo += await prisma.inspeccionPesado.count({ where: whereAltoPesado });
+		}
 
 		// Datos rechazados y motivos de rechazo
 		const totalRechazadosLigero = await prisma.rechazoInspeccion.count();
@@ -408,15 +527,28 @@ router.get('/', async (req, res) => {
 			.sort((a, b) => b.count - a.count)
 			.slice(0, 5);
 
-		// Tendencia de inspecciones por día (últimos 7 días)
+		// Tendencia de inspecciones por día (últimos 7 días aplicando filtros)
 		const desde = new Date();
 		desde.setDate(desde.getDate() - 7);
 		
 		const tendenciaMap = {};
 		
 		if (incluirLigero) {
+			// Combinar filtro de fecha de tendencia con otros filtros
+			const whereTendenciaLigero = { ...whereLigero };
+			if (whereTendenciaLigero.fecha) {
+				// Si ya hay filtro de fecha, usar el más restrictivo
+				const fechaExistente = whereTendenciaLigero.fecha;
+				whereTendenciaLigero.fecha = {
+					gte: fechaExistente.gte && fechaExistente.gte > desde ? fechaExistente.gte : desde,
+					...(fechaExistente.lt && { lt: fechaExistente.lt })
+				};
+			} else {
+				whereTendenciaLigero.fecha = { gte: desde };
+			}
+			
 			const inspeccionesLigero = await prisma.inspeccion.findMany({
-				where: { fecha: { gte: desde } },
+				where: whereTendenciaLigero,
 				select: { fecha: true }
 			});
 			inspeccionesLigero.forEach(i => {
@@ -426,8 +558,21 @@ router.get('/', async (req, res) => {
 		}
 		
 		if (incluirPesado) {
+			// Combinar filtro de fecha de tendencia con otros filtros
+			const whereTendenciaPesado = { ...wherePesado };
+			if (whereTendenciaPesado.marca_temporal) {
+				// Si ya hay filtro de fecha, usar el más restrictivo
+				const fechaExistente = whereTendenciaPesado.marca_temporal;
+				whereTendenciaPesado.marca_temporal = {
+					gte: fechaExistente.gte && fechaExistente.gte > desde ? fechaExistente.gte : desde,
+					...(fechaExistente.lt && { lt: fechaExistente.lt })
+				};
+			} else {
+				whereTendenciaPesado.marca_temporal = { gte: desde };
+			}
+			
 			const inspeccionesPesado = await prisma.inspeccionPesado.findMany({
-				where: { marca_temporal: { gte: desde } },
+				where: whereTendenciaPesado,
 				select: { marca_temporal: true }
 			});
 			inspeccionesPesado.forEach(i => {
@@ -438,12 +583,13 @@ router.get('/', async (req, res) => {
 		
 		const tendencia = Object.keys(tendenciaMap).sort().map(fecha => ({ fecha, count: tendenciaMap[fecha] }));
 
-		// Conductores con más alertas
+		// Conductores con más alertas (aplicando filtros)
 		const conductorMap = {};
 		
 		if (incluirLigero) {
+			const whereAlertasLigero = { ...whereLigero, tiene_alertas_criticas: true };
 			const alertasLigero = await prisma.inspeccion.findMany({
-				where: { tiene_alertas_criticas: true },
+				where: whereAlertasLigero,
 				select: { conductor_nombre: true }
 			});
 			alertasLigero.forEach(a => {
@@ -454,8 +600,9 @@ router.get('/', async (req, res) => {
 		}
 		
 		if (incluirPesado) {
+			const whereAlertasPesado = { ...wherePesado, tiene_alertas_criticas: true };
 			const alertasPesado = await prisma.inspeccionPesado.findMany({
-				where: { tiene_alertas_criticas: true },
+				where: whereAlertasPesado,
 				select: { nombre_inspector: true }
 			});
 			alertasPesado.forEach(a => {

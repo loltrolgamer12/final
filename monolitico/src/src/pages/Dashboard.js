@@ -25,7 +25,13 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  CircularProgress
+  CircularProgress,
+  TextField,
+  Stack,
+  Button,
+  Tooltip,
+  IconButton,
+  Snackbar
 } from '@mui/material';
 import StatusCard from '../components/common/StatusCard';
 import TipoSelector from '../components/common/TipoSelector';
@@ -35,6 +41,9 @@ import ApiIcon from '@mui/icons-material/Api';
 import DevicesIcon from '@mui/icons-material/Devices';
 import SpeedIcon from '@mui/icons-material/Speed';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
+import CloseIcon from '@mui/icons-material/Close';
 import api from '../services/api';
 import KpiCharts from '../components/common/KpiCharts';
 import { 
@@ -72,36 +81,133 @@ export default function Dashboard() {
   const [tipo, setTipo] = useState(''); // El usuario debe elegir explícitamente
   const [error, setError] = useState(null);
 
+  // Filtros avanzados - igual que en Vehiculos y Conductores
+  const [filtros, setFiltros] = useState(() => {
+    const fav = localStorage.getItem('dashboard_favoritos');
+    return fav ? JSON.parse(fav) : {
+      dia: '', mes: '', ano: '', conductor: '', placa: '', cumplimiento: '', 
+      critico: '', fatiga: '', contrato: '', campo: ''
+    };
+  });
+
+  // Opciones para contrato y campo
+  const [contratoOptions, setContratoOptions] = useState([]);
+  const [campoOptions, setCampoOptions] = useState([]);
+  
+  // Favoritos y notificaciones
+  const [esFavorito, setEsFavorito] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
+
+  // Arrays para selects de fecha
+  const dias = Array.from({ length: 31 }, (_, i) => i + 1);
+  const meses = [
+    { value: 1, label: 'Enero' }, { value: 2, label: 'Febrero' }, { value: 3, label: 'Marzo' },
+    { value: 4, label: 'Abril' }, { value: 5, label: 'Mayo' }, { value: 6, label: 'Junio' },
+    { value: 7, label: 'Julio' }, { value: 8, label: 'Agosto' }, { value: 9, label: 'Septiembre' },
+    { value: 10, label: 'Octubre' }, { value: 11, label: 'Noviembre' }, { value: 12, label: 'Diciembre' }
+  ];
+  const anoActual = new Date().getFullYear();
+  const anos = Array.from({ length: 6 }, (_, i) => anoActual - i);
+
+  // Cargar opciones de contrato y campo
+  useEffect(() => {
+    api.get('/filtros/vehiculos').then(res => {
+      setContratoOptions(res.data.data.contratos || []);
+      setCampoOptions(res.data.data.campos || []);
+    });
+  }, []);
+
+  // Verificar si los filtros actuales son favoritos
+  useEffect(() => {
+    const fav = localStorage.getItem('dashboard_favoritos');
+    setEsFavorito(fav && JSON.stringify(filtros) === fav);
+  }, [filtros]);
+
+  /**
+   * Función para cargar datos del dashboard con filtros
+   */
+  const fetchDashboardData = async (params = {}) => {
+    setError(null);
+    setLoading(true);
+    try {
+      const query = new URLSearchParams();
+      if (tipo) query.append('tipo', tipo);
+      if (params.dia) query.append('dia', params.dia);
+      if (params.mes) query.append('mes', params.mes);
+      if (params.ano) query.append('ano', params.ano);
+      if (params.conductor) query.append('conductor', params.conductor);
+      if (params.placa) query.append('placa', params.placa);
+      if (params.cumplimiento !== '') query.append('cumplimiento', params.cumplimiento);
+      if (params.critico !== '') query.append('critico', params.critico);
+      if (params.fatiga !== '') query.append('fatiga', params.fatiga);
+      if (params.contrato) query.append('contrato', params.contrato);
+      if (params.campo) query.append('campo', params.campo);
+
+      const url = query.toString() ? `/dashboard?${query}` : '/dashboard';
+      const response = await api.get(url);
+      
+      if (response.data.success) {
+        setStats(prev => ({
+          ...prev,
+          totalInspecciones: response.data.data.totalInspecciones || 0,
+          altoRiesgo: response.data.data.altoRiesgo || 0,
+          medioRiesgo: response.data.data.medioRiesgo || 0,
+          bajoRiesgo: response.data.data.bajoRiesgo || 0,
+          totalRechazados: response.data.data.totalRechazados || 0,
+          motivosRechazo: response.data.data.motivosRechazo || []
+        }));
+      } else {
+        setError('No se pudo obtener los datos del dashboard.');
+      }
+    } catch (err) {
+      setError('Error al cargar datos del dashboard.');
+      console.error('Error al cargar datos del dashboard:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   /**
    * Efecto para cargar datos del dashboard cuando cambia el tipo
    */
   useEffect(() => {
-    async function fetchData() {
-      setError(null);
-      try {
-        const response = await api.get(`/dashboard${tipo ? `?tipo=${tipo}` : ''}`);
-        if (response.data.success) {
-          setStats(prev => ({
-            ...prev,
-            totalInspecciones: response.data.data.totalInspecciones || 0,
-            altoRiesgo: response.data.data.altoRiesgo || 0,
-            medioRiesgo: response.data.data.medioRiesgo || 0,
-            bajoRiesgo: response.data.data.bajoRiesgo || 0,
-            totalRechazados: response.data.data.totalRechazados || 0,
-            motivosRechazo: response.data.data.motivosRechazo || []
-          }));
-        } else {
-          setError('No se pudo obtener los datos del dashboard.');
-        }
-      } catch (err) {
-        setError('Error al cargar datos del dashboard.');
-        console.error('Error al cargar datos del dashboard:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
+    fetchDashboardData(filtros);
   }, [tipo]);
+
+  // Manejar cambios en filtros
+  const handleFiltroChange = (e) => {
+    const { name, value } = e.target;
+    setFiltros(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleBuscar = () => {
+    fetchDashboardData(filtros);
+    setSnackbar({ open: true, message: 'Filtros aplicados al dashboard', severity: 'success' });
+  };
+
+  const handleLimpiar = () => {
+    const filtrosLimpios = { dia: '', mes: '', ano: '', conductor: '', placa: '', cumplimiento: '', 
+      critico: '', fatiga: '', contrato: '', campo: '' };
+    setFiltros(filtrosLimpios);
+    fetchDashboardData(filtrosLimpios);
+    setSnackbar({ open: true, message: 'Filtros limpiados', severity: 'info' });
+    setEsFavorito(false);
+  };
+
+  // Favoritos
+  const handleFavorito = () => {
+    if (esFavorito) {
+      localStorage.removeItem('dashboard_favoritos');
+      setSnackbar({ open: true, message: 'Favorito eliminado', severity: 'info' });
+    } else {
+      localStorage.setItem('dashboard_favoritos', JSON.stringify(filtros));
+      setSnackbar({ open: true, message: 'Filtro guardado como favorito', severity: 'success' });
+    }
+    setEsFavorito(!esFavorito);
+  };
 
   // Indicadores de estado del sistema
   const systemStatusItems = [
@@ -133,6 +239,123 @@ export default function Dashboard() {
         </Box>
         <TipoSelector value={tipo} onChange={e => setTipo(e.target.value)} loading={loading} />
       </Box>
+
+      {/* Filtros avanzados - igual que en Vehículos y Conductores */}
+      <Paper sx={{ p: 2, borderRadius: 2, mb: 3, background: '#f7fafd', boxShadow: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6" sx={{ flexGrow: 1 }}>
+            Filtros Avanzados
+          </Typography>
+          <Tooltip title={esFavorito ? 'Eliminar favorito' : 'Guardar filtros como favorito'}>
+            <IconButton onClick={handleFavorito} color={esFavorito ? 'warning' : 'default'}>
+              {esFavorito ? <StarIcon /> : <StarBorderIcon />}
+            </IconButton>
+          </Tooltip>
+        </Box>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center" justifyContent="flex-start" flexWrap="wrap">
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <InputLabel shrink>Contrato</InputLabel>
+            <Select
+              label="Contrato"
+              name="contrato"
+              value={filtros.contrato}
+              onChange={handleFiltroChange}
+              displayEmpty
+            >
+              <MenuItem value=""><em>Todos</em></MenuItem>
+              {contratoOptions.map((c) => (
+                <MenuItem key={c} value={c}>{c}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <InputLabel shrink>Campo/Coordinación</InputLabel>
+            <Select
+              label="Campo/Coordinación"
+              name="campo"
+              value={filtros.campo}
+              onChange={handleFiltroChange}
+              displayEmpty
+            >
+              <MenuItem value=""><em>Todos</em></MenuItem>
+              {campoOptions.map((c) => (
+                <MenuItem key={c} value={c}>{c}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: 90 }}>
+            <InputLabel shrink>Día</InputLabel>
+            <Select label="Día" name="dia" value={filtros.dia} onChange={handleFiltroChange} displayEmpty>
+              <MenuItem value=""><em>Todos</em></MenuItem>
+              {dias.map(d => <MenuItem key={d} value={d}>{d}</MenuItem>)}
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <InputLabel shrink>Mes</InputLabel>
+            <Select label="Mes" name="mes" value={filtros.mes} onChange={handleFiltroChange} displayEmpty>
+              <MenuItem value=""><em>Todos</em></MenuItem>
+              {meses.map(m => <MenuItem key={m.value} value={m.value}>{m.label}</MenuItem>)}
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: 100 }}>
+            <InputLabel shrink>Año</InputLabel>
+            <Select label="Año" name="ano" value={filtros.ano} onChange={handleFiltroChange} displayEmpty>
+              <MenuItem value=""><em>Todos</em></MenuItem>
+              {anos.map(a => <MenuItem key={a} value={a}>{a}</MenuItem>)}
+            </Select>
+          </FormControl>
+          <TextField size="small" label="Conductor" name="conductor" value={filtros.conductor} onChange={handleFiltroChange} sx={{ minWidth: 180 }} />
+          <TextField size="small" label="Placa" name="placa" value={filtros.placa} onChange={handleFiltroChange} sx={{ minWidth: 120 }} />
+          <FormControl size="small" sx={{ minWidth: 130 }}>
+            <InputLabel shrink>Cumplimiento</InputLabel>
+            <Select 
+              label="Cumplimiento" 
+              name="cumplimiento" 
+              value={filtros.cumplimiento} 
+              onChange={handleFiltroChange}
+              displayEmpty
+            >
+              <MenuItem value=""><em>Todos</em></MenuItem>
+              <MenuItem value="true">Cumple</MenuItem>
+              <MenuItem value="false">No cumple</MenuItem>
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: 110 }}>
+            <InputLabel shrink>Crítico</InputLabel>
+            <Select 
+              label="Crítico" 
+              name="critico" 
+              value={filtros.critico} 
+              onChange={handleFiltroChange}
+              displayEmpty
+            >
+              <MenuItem value=""><em>Todos</em></MenuItem>
+              <MenuItem value="true">Sí</MenuItem>
+              <MenuItem value="false">No</MenuItem>
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: 110 }}>
+            <InputLabel shrink>Fatiga</InputLabel>
+            <Select 
+              label="Fatiga" 
+              name="fatiga" 
+              value={filtros.fatiga} 
+              onChange={handleFiltroChange}
+              displayEmpty
+            >
+              <MenuItem value=""><em>Todos</em></MenuItem>
+              <MenuItem value="true">Sí</MenuItem>
+              <MenuItem value="false">No</MenuItem>
+            </Select>
+          </FormControl>
+          <Button variant="contained" color="primary" onClick={handleBuscar} sx={{ minWidth: 100 }}>
+            Buscar
+          </Button>
+          <Button variant="outlined" color="secondary" onClick={handleLimpiar} sx={{ minWidth: 100 }}>
+            Limpiar
+          </Button>
+        </Stack>
+      </Paper>
 
       {/* Loader visual */}
       {loading && (
@@ -216,6 +439,37 @@ export default function Dashboard() {
           </Paper>
         </Box>
       )}
+
+      {/* Snackbar para notificaciones */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            backgroundColor: snackbar.severity === 'error' ? '#d32f2f' : 
+                           snackbar.severity === 'warning' ? '#ed6c02' : 
+                           snackbar.severity === 'success' ? '#2e7d32' : '#1976d2',
+            color: 'white',
+            padding: '8px 16px',
+            borderRadius: 1,
+            boxShadow: 3
+          }}
+        >
+          <Typography variant="body2">{snackbar.message}</Typography>
+          <IconButton
+            size="small"
+            onClick={() => setSnackbar({ ...snackbar, open: false })}
+            sx={{ color: 'white', ml: 1 }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Box>
+      </Snackbar>
     </Box>
   );
 }
