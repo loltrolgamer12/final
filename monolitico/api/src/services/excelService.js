@@ -21,10 +21,47 @@ module.exports = {
         console.log(`📋 Primeras 10 columnas:`, colNames.slice(0, 10));
       }
       
-      // Mapear registros según tipo
-      const mappedRecords = jsonData.map(row => 
-        tipo === 'pesado' ? this.mapRecordPesado(row) : this.mapRecord(row)
-      );
+      // Detectar tipo de Excel y campos disponibles
+      const tieneMetadata = jsonData.length > 0 && jsonData[0]._meta;
+      const tieneFatiga = tieneMetadata ? jsonData[0]._meta.tieneCamposFatiga : false;
+      
+      console.log(`🔍 Excel metadata: ${tieneMetadata ? 'Disponible' : 'No disponible'}`);
+      console.log(`🔍 Campos de fatiga: ${tieneFatiga ? 'Presentes' : 'Ausentes'}`);
+      
+      // Mapear registros según tipo con manejo de errores
+      const mappedRecords = [];
+      const mappingErrors = [];
+      
+      for (let i = 0; i < jsonData.length; i++) {
+        try {
+          const record = tipo === 'pesado' ? this.mapRecordPesado(jsonData[i]) : this.mapRecord(jsonData[i]);
+          
+          // Validar campos críticos
+          if (!record.placa_vehiculo || !record.fecha) {
+            mappingErrors.push({
+              fila: i + 2, // +2 porque empezamos en fila 2 después de headers
+              error: 'Campos críticos faltantes (placa o fecha)',
+              registro: jsonData[i]
+            });
+            continue;
+          }
+          
+          mappedRecords.push(record);
+        } catch (error) {
+          mappingErrors.push({
+            fila: i + 2,
+            error: `Error en mapeo: ${error.message}`,
+            registro: jsonData[i]
+          });
+        }
+      }
+      
+      if (mappingErrors.length > 0) {
+        console.log(`⚠️ Errores de mapeo: ${mappingErrors.length} registros`);
+        mappingErrors.slice(0, 5).forEach(err => {
+          console.log(`   Fila ${err.fila}: ${err.error}`);
+        });
+      }
       
       const validRecords = [];
       const duplicates = [];
@@ -32,10 +69,10 @@ module.exports = {
       let dbDuplicates = 0;
       const rechazados = [];
 
-      // Validar y detectar duplicados (optimizado en bloque)
-      // MODO ESTRICTO: true = requiere todos los campos completos (sin campos vacíos)
-      const strict = options.strict === 'false' || options.strict === false ? false : true;
-      console.log(`🔍 Modo de validación: ${strict ? 'ESTRICTO' : 'PERMISIVO'} (recibido: ${options.strict})`);
+      // Validar registros mapeados
+      // MODO ESTRICTO: false por defecto para Excel con datos faltantes
+      const strict = options.strict === 'true' || options.strict === true ? true : false;
+      console.log(`🔍 Modo de validación: ${strict ? 'ESTRICTO' : 'PERMISIVO'} (Excel con fatiga: ${tieneFatiga})`);
       
       for (const record of mappedRecords) {
         const validation = validationService.validateRecord(record, tipo, strict);
@@ -384,10 +421,11 @@ module.exports = {
       kit_ambiental: validationService.normalizeBoolean(row['Kit ambiental']),
       documentacion: validationService.normalizeBoolean(row['Documentación: tecnomecánica y de gases, tarjeta de propiedad, SOAT, licencia de conducción y permiso para conducir interno']),
       observaciones: getCol('OBSERVACIONES'),
-      horas_sueno_suficientes: validationService.normalizeBoolean(row['¿Ha dormido al menos 7 horas en las últimas 24 horas?']),
-      libre_sintomas_fatiga: validationService.normalizeBoolean(row['¿Se encuentra libre de síntomas de fatiga (Somnolencia, dolor de cabeza, irritabilidad)?']),
-      condiciones_aptas: validationService.normalizeBoolean(row['¿Se siente en condiciones físicas y mentales para conducir? ']),
-      consumo_medicamentos: validationService.normalizeBoolean(row['¿Ha consumido medicamentos o sustancias que afecten su estado de alerta?']),
+      // CAMPOS DE FATIGA: Con lógica inteligente para manejar datos vacíos/faltantes
+      horas_sueno_suficientes: this.getFatigaValueSafe(row, '¿Ha dormido al menos 7 horas en las últimas 24 horas?', true),
+      libre_sintomas_fatiga: this.getFatigaValueSafe(row, '¿Se encuentra libre de síntomas de fatiga (Somnolencia, dolor de cabeza, irritabilidad)?', true),
+      condiciones_aptas: this.getFatigaValueSafe(row, '¿Se siente en condiciones físicas y mentales para conducir? ', true), // CON ESPACIO AL FINAL
+      consumo_medicamentos: this.getFatigaValueSafe(row, '¿Ha consumido medicamentos o sustancias que afecten su estado de alerta?', false),
       nivel_riesgo: 'BAJO', // Calculado después
       puntaje_total: 0,     // Calculado después
       puntaje_fatiga: 0,    // Calculado después
@@ -495,5 +533,51 @@ module.exports = {
     const riesgo = this.calcularRiesgo(row);
     const puntajeFatiga = this.calcularPuntajeFatiga(row);
     return riesgo === 'ALTO' || puntajeFatiga < 2;
+  },
+
+  // Función segura para obtener valores de fatiga con múltiples capas de protección
+  getFatigaValueSafe(row, fieldName, defaultValue) {
+    // 1. Verificar si tenemos metadata del Excel
+    const tieneCamposFatiga = row._meta?.tieneCamposFatiga || false;
+    
+    // 2. Si el Excel NO tiene campos de fatiga, usar valor por defecto seguro
+    if (!tieneCamposFatiga) {
+      return defaultValue;
+    }
+    
+    // 3. Buscar el campo exacto
+    if (row.hasOwnProperty(fieldName)) {
+      const valor = row[fieldName];
+      
+      // 4. Si el campo existe pero está vacío, usar valor por defecto
+      if (valor === null || valor === undefined || valor === '' || valor === 'undefined') {
+        console.log(`⚠️ Campo de fatiga vacío: "${fieldName}" → usando default: ${defaultValue}`);
+        return defaultValue;
+      }
+      
+      // 5. Normalizar el valor
+      return validationService.normalizeBoolean(valor);
+    }
+    
+    // 6. Buscar variaciones del nombre del campo (con/sin espacios)
+    const variations = [
+      fieldName.trim(),
+      fieldName.replace(/\s+/g, ' '),
+      fieldName.replace(/\s+$/, ''), // Sin espacios al final
+      fieldName + ' ', // Con espacio al final
+    ];
+    
+    for (const variation of variations) {
+      if (row.hasOwnProperty(variation)) {
+        const valor = row[variation];
+        if (valor !== null && valor !== undefined && valor !== '' && valor !== 'undefined') {
+          return validationService.normalizeBoolean(valor);
+        }
+      }
+    }
+    
+    // 7. Si llegamos aquí, el campo no existe o está vacío
+    console.log(`⚠️ Campo de fatiga no encontrado/vacío: "${fieldName}" → usando default: ${defaultValue}`);
+    return defaultValue;
   }
 };
