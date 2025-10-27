@@ -36,10 +36,20 @@ module.exports = {
         try {
           const record = tipo === 'pesado' ? this.mapRecordPesado(jsonData[i]) : this.mapRecord(jsonData[i]);
           
-          // Validar campos críticos
-          if (!record.placa_vehiculo || !record.fecha) {
+          // Si mapRecord devuelve null, significa que faltan campos críticos
+          if (!record) {
             mappingErrors.push({
               fila: i + 2, // +2 porque empezamos en fila 2 después de headers
+              error: 'Campos críticos faltantes (placa, fecha o inspector)',
+              registro: jsonData[i]
+            });
+            continue;
+          }
+          
+          // Validar campos críticos adicionales
+          if (!record.placa_vehiculo || !record.fecha) {
+            mappingErrors.push({
+              fila: i + 2,
               error: 'Campos críticos faltantes (placa o fecha)',
               registro: jsonData[i]
             });
@@ -233,6 +243,16 @@ module.exports = {
       return found ? row[found] : null;
     };
     
+    // Debug: Verificar campos básicos
+    const placa = (getCol('PLACA DEL VEHICULO') || getCol('PLACA DEL VEHÍCULO') || '').toString().replace(/\s+/g, '').toUpperCase();
+    const fecha = getCol('Marca temporal');
+    const inspector = (getCol('NOMBRE DE QUIEN REALIZA LA INSPECCIÓN ') || getCol('NOMBRE DE QUIEN REALIZA LA INSPECCIÓN') || '').toString().trim();
+    
+    if (!placa || !fecha || !inspector) {
+      console.log(`⚠️ Registro rechazado - campos faltantes: placa="${placa}", fecha="${fecha}", inspector="${inspector}"`);
+      return null;
+    }
+    
     // Función para convertir número de Excel (serial date) a fecha ISO
     const excelDateToISO = (excelDate) => {
       if (!excelDate) return null;
@@ -258,11 +278,11 @@ module.exports = {
     
     return {
       marca_temporal: excelDateToISO(getCol('Marca temporal')),
-      conductor_nombre: (getCol('NOMBRE DE QUIEN REALIZA LA INSPECCIÓN ') || '').toString().trim(),
+      conductor_nombre: (getCol('NOMBRE DE QUIEN REALIZA LA INSPECCIÓN ') || getCol('NOMBRE DE QUIEN REALIZA LA INSPECCIÓN') || '').toString().trim(),
       fecha: excelDateToISO(getCol('Marca temporal')),
       contrato: getCol('CONTRATO') || '',
       campo_coordinacion: getCol('CAMPO/COORDINACIÓN') || '',
-      placa_vehiculo: getCol('PLACA DEL VEHICULO') ? String(getCol('PLACA DEL VEHICULO')).replace(/\s+/g, '').toUpperCase() : '',
+      placa_vehiculo: (getCol('PLACA DEL VEHICULO') || getCol('PLACA DEL VEHÍCULO') || '').toString().replace(/\s+/g, '').toUpperCase(),
       kilometraje: validationService.normalizeKilometraje(getCol('KILOMETRAJE')),
       turno: getCol('TURNO') ? String(getCol('TURNO')).toUpperCase().trim() : '',
       // Luces
@@ -559,12 +579,14 @@ module.exports = {
       return validationService.normalizeBoolean(valor);
     }
     
-    // 6. Buscar variaciones del nombre del campo (con/sin espacios)
+    // 6. Buscar variaciones del nombre del campo (con/sin espacios, asteriscos)
     const variations = [
       fieldName.trim(),
       fieldName.replace(/\s+/g, ' '),
       fieldName.replace(/\s+$/, ''), // Sin espacios al final
       fieldName + ' ', // Con espacio al final
+      fieldName + '*', // Con asterisco al final (para ligeros)
+      fieldName.replace(/\*$/, ''), // Sin asterisco al final
     ];
     
     for (const variation of variations) {
@@ -579,5 +601,71 @@ module.exports = {
     // 7. Si llegamos aquí, el campo no existe o está vacío
     console.log(`⚠️ Campo de fatiga no encontrado/vacío: "${fieldName}" → usando default: ${defaultValue}`);
     return defaultValue;
+  },
+
+  // Función de procesamiento directo para testing
+  async processExcel(data, tipoVehiculo, modoTest = false) {
+    try {
+      // Obtener metadata del primer elemento válido
+      const metadata = data.find(row => row._meta)?._meta || { tieneCamposFatiga: false };
+      console.log(`🔍 Modo de validación: ${modoTest ? 'TEST' : 'PRODUCCIÓN'} (Excel con fatiga: ${metadata.tieneCamposFatiga})`);
+      
+      let registrosValidos = 0;
+      let registrosRechazados = 0;
+      let duplicados = 0;
+      let insertados = 0;
+      let errores = 0;
+      
+      // Procesar cada registro
+      console.log(`🔄 Iniciando procesamiento de ${data.length} registros...`);
+      
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        if (row._meta) {
+          console.log(`⏭️ Saltando metadata en posición ${i}`);
+          continue; // Saltar metadata
+        }
+        
+        console.log(`📋 Procesando registro ${i + 1}/${data.length}`);
+        
+        try {
+          let record;
+          if (tipoVehiculo === 'pesado') {
+            record = this.mapRecordPesado(row);
+          } else {
+            record = this.mapRecord(row);
+          }
+          
+          console.log(`📋 Record ${i + 1}: ${record ? 'Válido' : 'Inválido'}`);
+          
+          if (record) {
+            registrosValidos++;
+            
+            if (!modoTest) {
+              // Aquí iría la lógica de inserción en BD
+              // Para test solo contamos
+              insertados++;
+            }
+          } else {
+            registrosRechazados++;
+          }
+        } catch (error) {
+          errores++;
+          console.error(`❌ Error procesando registro:`, error.message);
+        }
+      }
+      
+      return {
+        registrosValidos,
+        registrosRechazados,
+        duplicados,
+        insertados,
+        errores
+      };
+      
+    } catch (error) {
+      console.error('❌ Error en processExcel:', error);
+      throw error;
+    }
   }
 };

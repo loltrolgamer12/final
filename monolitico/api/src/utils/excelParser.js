@@ -28,9 +28,17 @@ module.exports = {
       '¿Ha consumido medicamentos o sustancias que afecten su estado de alerta?'
     ];
     
-    const tieneCamposFatiga = camposFatigaEsperados.some(campo => 
-      cleanHeaders.some(header => header.includes('dormido') || header.includes('fatiga') || header.includes('condiciones') || header.includes('medicamentos'))
+    // Mejorar detección de campos de fatiga
+    const palabrasClaveMatches = cleanHeaders.filter(header => 
+      header.includes('dormido') || 
+      header.includes('fatiga') || 
+      header.includes('condiciones') || 
+      header.includes('medicamentos')
     );
+    
+    console.log(`🔍 Headers que contienen palabras de fatiga: ${palabrasClaveMatches.length}`, palabrasClaveMatches);
+    
+    const tieneCamposFatiga = palabrasClaveMatches.length >= 2; // Al menos 2 campos de fatiga
     
     console.log(`🔍 Excel tiene campos de fatiga: ${tieneCamposFatiga ? '✅' : '❌'}`);
     
@@ -45,22 +53,26 @@ module.exports = {
     
     console.log(`📊 Excel Parser: ${data.length} filas procesadas`);
     
-    // Filtrar filas completamente vacías y agregar metadata
+    // Filtrar filas completamente vacías
     const validData = data.filter(row => {
       // Una fila es válida si tiene al menos campos básicos
-      const placa = row['PLACA DEL VEHICULO'];
+      const placa = row['PLACA DEL VEHICULO'] || row['PLACA DEL VEHÍCULO']; // VEHICULO sin É primero
       const fecha = row['Marca temporal'];
-      const inspector = row['NOMBRE DE QUIEN REALIZA LA INSPECCIÓN'];
+      // Para inspector, probar ambas variantes (con y sin espacio final)
+      const inspector = row['NOMBRE DE QUIEN REALIZA LA INSPECCIÓN '] || row['NOMBRE DE QUIEN REALIZA LA INSPECCIÓN']; // Con espacio primero
       
       return placa && fecha && inspector;
-    }).map(row => {
-      // Agregar metadata para el procesador
-      row._meta = {
-        tieneCamposFatiga: tieneCamposFatiga,
-        headerCount: cleanHeaders.length
-      };
-      return row;
     });
+    
+    // Agregar metadata al inicio del array
+    if (validData.length > 0) {
+      validData.unshift({
+        _meta: {
+          tieneCamposFatiga: tieneCamposFatiga,
+          headerCount: cleanHeaders.length
+        }
+      });
+    }
     
     console.log(`📊 Excel Parser: ${validData.length} filas válidas (con placa, fecha, inspector)`);
     
