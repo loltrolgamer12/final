@@ -165,8 +165,13 @@ module.exports = {
       const batchSize = options.batchSize || 100;
       const batches = this.splitIntoBatches(validRecords, batchSize);
       let insertados = 0;
+      let hasConnectionError = false;
+      
       for (const batch of batches) {
         try {
+          // Reconectar si es necesario
+          await prisma.$connect();
+          
           const result = await tablaInspeccion.createMany({ data: batch, skipDuplicates: true });
           insertados += result.count;
           dbDuplicates += (batch.length - result.count);
@@ -174,8 +179,23 @@ module.exports = {
           if (error.code === 'P2002') {
             dbDuplicates += batch.length;
             batch.forEach(rec => rechazados.push({ ...rec, motivo_rechazo: 'Duplicado en base de datos (restricción única)' }));
+          } else if (error.code === 'P1017' || error.message.includes('Server has closed the connection')) {
+            console.error('Error de conexión a base de datos:', error.message);
+            hasConnectionError = true;
+            // Intentar reconectar y reintentar
+            try {
+              await prisma.$disconnect();
+              await prisma.$connect();
+              const result = await tablaInspeccion.createMany({ data: batch, skipDuplicates: true });
+              insertados += result.count;
+              dbDuplicates += (batch.length - result.count);
+            } catch (retryError) {
+              console.error('Error al reintentar inserción:', retryError.message);
+              throw new Error(`Error de conexión a base de datos: ${retryError.message}`);
+            }
           } else {
             console.error('Error al insertar batch:', error);
+            throw error;
           }
         }
       }
@@ -189,33 +209,42 @@ module.exports = {
         }
       }
 
-      // Registrar archivo procesado evitando duplicidad de hash_archivo
-      const archivoExistente = await prisma.archivoProcesado.findUnique({
-        where: { hash_archivo: fileHash }
-      });
-      if (!archivoExistente) {
-        await prisma.archivoProcesado.create({
-          data: {
-            nombre_archivo: filename,
-            hash_archivo: fileHash,
-            tamano_archivo: buffer.length,
-            total_registros: mappedRecords.length,
-            registros_insertados: insertados,
-            registros_duplicados: duplicates.length + dbDuplicates,
-            registros_error: errors.length,
-            tiempo_procesamiento: 0, // Se puede calcular con Date.now()
-            errores_validacion: errors,
-            advertencias: [],
-            fecha_procesamiento: new Date(),
-            usuario_carga: 'admin' // Se puede obtener del contexto
-          }
+      // Registrar archivo procesado solo si no hubo errores de conexión
+      // y si se procesó correctamente
+      if (!hasConnectionError && mappedRecords.length > 0) {
+        const archivoExistente = await prisma.archivoProcesado.findUnique({
+          where: { hash_archivo: fileHash }
         });
-      } else {
-        console.log('Este archivo Excel ya fue procesado anteriormente.');
-        return {
-          success: false,
-          error: 'Este archivo Excel ya fue procesado anteriormente. Si necesitas volver a cargarlo, modifica el archivo o usa uno diferente.'
-        };
+        
+        if (!archivoExistente) {
+          try {
+            await prisma.archivoProcesado.create({
+              data: {
+                nombre_archivo: filename,
+                hash_archivo: fileHash,
+                tamano_archivo: buffer.length,
+                total_registros: mappedRecords.length,
+                registros_insertados: insertados,
+                registros_duplicados: duplicates.length + dbDuplicates,
+                registros_error: errors.length,
+                tiempo_procesamiento: 0,
+                errores_validacion: errors,
+                advertencias: [],
+                fecha_procesamiento: new Date(),
+                usuario_carga: 'admin'
+              }
+            });
+          } catch (archiveError) {
+            console.error('Error al registrar archivo procesado:', archiveError.message);
+            // No fallar todo el proceso por esto
+          }
+        } else {
+          console.log('Este archivo Excel ya fue procesado anteriormente.');
+          return {
+            success: false,
+            error: 'Este archivo Excel ya fue procesado anteriormente. Si necesitas volver a cargarlo, modifica el archivo o usa uno diferente.'
+          };
+        }
       }
 
       return {
